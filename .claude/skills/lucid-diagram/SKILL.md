@@ -7,7 +7,11 @@ description: This skill generates architecture, data flow, and sequence diagrams
 
 ## Overview
 
-This skill creates technical diagrams by generating Graphviz DOT files and converting them to Lucid Chart compatible XML format using graphviz2drawio. Output files are placed in `docs/diagrams/` at the project root.
+This skill creates technical diagrams by generating Graphviz DOT files and converting them to:
+1. **PNG image** - For embedding in documentation and READMEs
+2. **Lucid Chart compatible XML** - For importing into Lucid Chart for further editing
+
+Output files are placed in `docs/diagrams/` at the project root.
 
 ## Supported Diagram Types
 
@@ -53,19 +57,31 @@ digraph DiagramName {
 }
 ```
 
-### Step 3: Convert to Lucid Chart Format
+### Step 3: Convert to PNG and Lucid Chart Format
 
-Run the conversion script to generate the XML file:
+Run the conversion script to generate both the PNG image and XML file:
 
 ```bash
 python3 <skill_path>/scripts/convert_to_lucid.py docs/diagrams/<filename>.dot
 ```
 
-This produces `docs/diagrams/<filename>.xml` which can be imported directly into Lucid Chart.
+This produces:
+- `docs/diagrams/<filename>.png` - PNG image for documentation
+- `docs/diagrams/<filename>.xml` - Lucid Chart compatible XML
 
-### Step 4: Provide Import Instructions
+**Requirements:**
+- Graphviz must be installed for PNG generation (`brew install graphviz` on macOS)
+- graphviz2drawio is auto-installed for XML generation
+
+### Step 4: Provide Output Instructions
 
 After generating the files, instruct the user:
+
+**For PNG:**
+- The PNG can be embedded in README or documentation files
+- Reference it with: `![Diagram Name](docs/diagrams/<filename>.png)`
+
+**For Lucid Chart:**
 1. Open Lucid Chart
 2. Go to File > Import
 3. Select the generated `.xml` file
@@ -167,7 +183,7 @@ digraph Pipeline {
 ## Resources
 
 ### scripts/
-- `convert_to_lucid.py` - Converts DOT files to Lucid Chart compatible XML
+- `convert_to_lucid.py` - Converts DOT files to PNG images and Lucid Chart compatible XML
 
 ### references/
 - `graphviz_syntax.md` - Complete Graphviz DOT language reference with examples
