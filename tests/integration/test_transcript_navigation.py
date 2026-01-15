@@ -18,7 +18,6 @@ from sqlalchemy.orm import Session
 
 from src.models import ProcessingStatus, Recording, Transcript
 
-
 # Skip tests that require PostgreSQL JSONB support
 pytestmark = pytest.mark.skipif(
     True,  # Skip by default in unit test runs (SQLite)
@@ -152,15 +151,13 @@ class TestTranscriptViewFallbackChain:
 
         # Should use reconstructed (cleaner) text
         assert any(
-            "This is the clean original transcript text" in turn.get("text", "")
-            for turn in turns
+            "This is the clean original transcript text" in turn.get("text", "") for turn in turns
         ), "Should use reconstructed_dialog_json with clean text"
 
         # Should NOT contain typos from raw dialog_json
-        assert not any(
-            "This iz the clean orriginal" in turn.get("text", "")
-            for turn in turns
-        ), "Should not contain garbled text from raw dialog_json"
+        assert not any("This iz the clean orriginal" in turn.get("text", "") for turn in turns), (
+            "Should not contain garbled text from raw dialog_json"
+        )
 
     def test_transcript_view_falls_back_to_dialog_json(
         self, db_session: Session, recording_with_only_dialog_json: Recording
@@ -181,10 +178,9 @@ class TestTranscriptViewFallbackChain:
         turns = _convert_dialog_json_to_turns(dialog_data)
 
         assert len(turns) > 0, "Should have turns from dialog_json"
-        assert any(
-            "transcript" in turn.get("text", "").lower()
-            for turn in turns
-        ), "Should contain text from dialog_json fallback"
+        assert any("transcript" in turn.get("text", "").lower() for turn in turns), (
+            "Should contain text from dialog_json fallback"
+        )
 
     def test_transcript_view_falls_back_to_diarized_text(
         self, db_session: Session, recording_with_only_diarized_text: Recording
@@ -254,9 +250,9 @@ class TestTranscriptLoadCallbackFallback:
         transcript = recording_with_all_fields.transcript
 
         # The field should exist and be accessible
-        assert hasattr(
-            transcript, "reconstructed_dialog_json"
-        ), "Transcript model should have reconstructed_dialog_json field"
+        assert hasattr(transcript, "reconstructed_dialog_json"), (
+            "Transcript model should have reconstructed_dialog_json field"
+        )
 
         # The field should contain our test data
         assert transcript.reconstructed_dialog_json is not None
@@ -299,9 +295,9 @@ class TestTranscriptRouteConfiguration:
 
         # Should return a transcript view, not an error
         result_str = str(result)
-        assert (
-            "Invalid recording ID" not in result_str
-        ), "Valid UUID should not show invalid ID error"
+        assert "Invalid recording ID" not in result_str, (
+            "Valid UUID should not show invalid ID error"
+        )
 
     def test_transcript_route_rejects_invalid_uuid(self) -> None:
         """Test that transcript route rejects invalid UUID format."""
@@ -311,7 +307,6 @@ class TestTranscriptRouteConfiguration:
         result = display_page("/recording/not-a-valid-uuid")
         result_str = str(result)
 
-        assert (
-            "Invalid recording ID" in result_str
-            or "warning" in result_str.lower()
-        ), "Invalid UUID should show error message"
+        assert "Invalid recording ID" in result_str or "warning" in result_str.lower(), (
+            "Invalid UUID should show error message"
+        )

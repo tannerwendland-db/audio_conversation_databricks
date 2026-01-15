@@ -8,7 +8,7 @@ content does not exist yet and these tests are expected to fail initially.
 """
 
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -55,9 +55,7 @@ class TestChunkDialogSourcePreference:
         combined = " ".join(result)
         assert "Interviewer" in combined or "Respondent" in combined
 
-    def test_chunk_dialog_uses_clean_text(
-        self, reconstructed_dialog: list[dict[str, Any]]
-    ) -> None:
+    def test_chunk_dialog_uses_clean_text(self, reconstructed_dialog: list[dict[str, Any]]) -> None:
         """Test that chunks contain the clean text from reconstructed dialog."""
         from src.services.embedding import chunk_dialog
 
@@ -135,7 +133,10 @@ class TestEmbeddingContentQuality:
         """Dialog with proper grammar and spelling."""
         return [
             {"speaker": "Interviewer", "text": "What is your experience with machine learning?"},
-            {"speaker": "Respondent", "text": "I have been working with neural networks for five years."},
+            {
+                "speaker": "Respondent",
+                "text": "I have been working with neural networks for five years.",
+            },
         ]
 
     @pytest.fixture

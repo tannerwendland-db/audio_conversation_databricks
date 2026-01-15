@@ -23,9 +23,7 @@ class SpeakerEmbedding(Base):
 
     __tablename__ = "speaker_embeddings"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     recording_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("recordings.id", ondelete="CASCADE"),
@@ -39,9 +37,7 @@ class SpeakerEmbedding(Base):
     )
 
     # Relationships
-    recording: Mapped["Recording"] = relationship(
-        "Recording", back_populates="speaker_embeddings"
-    )
+    recording: Mapped["Recording"] = relationship("Recording", back_populates="speaker_embeddings")
 
     def __repr__(self) -> str:
         """Return string representation of the SpeakerEmbedding."""

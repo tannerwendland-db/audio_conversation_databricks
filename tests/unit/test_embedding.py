@@ -54,9 +54,7 @@ class TestChunkTranscript:
             next_words = next_chunk.split()
             # There should be some common words between chunks
             common_words = set(current_words[-5:]) & set(next_words[:10])
-            assert len(common_words) > 0, (
-                f"No overlap found between chunk {i} and {i + 1}"
-            )
+            assert len(common_words) > 0, f"No overlap found between chunk {i} and {i + 1}"
 
     def test_empty_text_handling(self):
         """Empty text should return an empty list."""
@@ -383,14 +381,17 @@ class TestChunkTranscriptEdgeCases:
         """Should preserve newlines and formatting in chunks."""
         from src.services.embedding import chunk_transcript
 
-        formatted_text = """[Speaker 0:00:00]
+        formatted_text = (
+            """[Speaker 0:00:00]
 First paragraph with some content.
 
 [Speaker 0:01:00]
 Second paragraph with more content.
 
 [Speaker 0:02:00]
-Third paragraph continuing the conversation.""" * 10
+Third paragraph continuing the conversation."""
+            * 10
+        )
 
         result = chunk_transcript(formatted_text, chunk_size=200, overlap=30)
 
@@ -647,9 +648,7 @@ class TestSimilaritySearch:
             query="What is the main topic?",
         )
 
-        mock_embeddings_instance.embed_query.assert_called_once_with(
-            "What is the main topic?"
-        )
+        mock_embeddings_instance.embed_query.assert_called_once_with("What is the main topic?")
 
 
 class TestDeleteRecordingChunks:

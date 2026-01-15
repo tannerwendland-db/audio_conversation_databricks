@@ -1,6 +1,5 @@
 """Unit tests for speaker embedding matching logic in audio service."""
 
-
 from src.services.audio import (
     SPEAKER_SIMILARITY_THRESHOLD,
     DiarizeResponse,
@@ -80,6 +79,7 @@ class TestCosineSimilarity:
     def test_cosine_similarity_normalized_range(self):
         """Similarity should always be in range [-1, 1]."""
         import random
+
         random.seed(42)
 
         for _ in range(10):

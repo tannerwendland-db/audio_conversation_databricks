@@ -4,8 +4,6 @@ Tests for the speaker color palette, deterministic color assignment,
 label formatting, and backward compatibility with existing 2-speaker transcripts.
 """
 
-import pytest
-
 
 class TestSpeakerPalette:
     """Tests for SPEAKER_PALETTE constant."""
@@ -347,7 +345,7 @@ class TestSpeakerLegend:
 
     def test_legend_includes_color_swatches(self):
         """Legend should include colored swatches for each speaker."""
-        from src.components.transcript import _create_speaker_legend, SPEAKER_PALETTE
+        from src.components.transcript import SPEAKER_PALETTE, _create_speaker_legend
 
         dialog_json = [
             {"speaker": "Interviewer", "text": "Hello"},

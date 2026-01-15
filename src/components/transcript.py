@@ -42,22 +42,22 @@ STATUS_LABELS = {
 # 10-color accessible palette for multi-speaker support
 # Material Design 100-level colors for good contrast with dark text
 SPEAKER_PALETTE = [
-    {"backgroundColor": "#e3f2fd", "name": "Light Blue"},      # 0: Interviewer
-    {"backgroundColor": "#f5f5f5", "name": "Light Gray"},      # 1: Respondent
-    {"backgroundColor": "#e8f5e9", "name": "Light Green"},     # 2: Extended palette
-    {"backgroundColor": "#fff8e1", "name": "Light Amber"},     # 3: Extended palette
-    {"backgroundColor": "#f3e5f5", "name": "Light Purple"},    # 4: Extended palette
-    {"backgroundColor": "#e0f2f1", "name": "Light Teal"},      # 5: Extended palette
-    {"backgroundColor": "#fce4ec", "name": "Light Pink"},      # 6: Extended palette
-    {"backgroundColor": "#e0f7fa", "name": "Light Cyan"},      # 7: Extended palette
-    {"backgroundColor": "#f9fbe7", "name": "Light Lime"},      # 8: Extended palette
-    {"backgroundColor": "#fff3e0", "name": "Light Orange"},    # 9: Extended palette
+    {"backgroundColor": "#e3f2fd", "name": "Light Blue"},  # 0: Interviewer
+    {"backgroundColor": "#f5f5f5", "name": "Light Gray"},  # 1: Respondent
+    {"backgroundColor": "#e8f5e9", "name": "Light Green"},  # 2: Extended palette
+    {"backgroundColor": "#fff8e1", "name": "Light Amber"},  # 3: Extended palette
+    {"backgroundColor": "#f3e5f5", "name": "Light Purple"},  # 4: Extended palette
+    {"backgroundColor": "#e0f2f1", "name": "Light Teal"},  # 5: Extended palette
+    {"backgroundColor": "#fce4ec", "name": "Light Pink"},  # 6: Extended palette
+    {"backgroundColor": "#e0f7fa", "name": "Light Cyan"},  # 7: Extended palette
+    {"backgroundColor": "#f9fbe7", "name": "Light Lime"},  # 8: Extended palette
+    {"backgroundColor": "#fff3e0", "name": "Light Orange"},  # 9: Extended palette
 ]
 
 # Fixed color assignments for backward compatibility
 FIXED_SPEAKER_COLORS = {
     "interviewer": 0,  # Light Blue
-    "respondent": 1,   # Light Gray
+    "respondent": 1,  # Light Gray
 }
 
 
@@ -115,17 +115,21 @@ def get_speaker_style(speaker_label: str) -> dict:
 
     # Position: Interviewer left-aligned, others right-aligned
     if speaker_label.lower() == "interviewer":
-        base_style.update({
-            "marginRight": "20%",
-            "marginLeft": "0",
-            "textAlign": "left",
-        })
+        base_style.update(
+            {
+                "marginRight": "20%",
+                "marginLeft": "0",
+                "textAlign": "left",
+            }
+        )
     else:
-        base_style.update({
-            "marginLeft": "20%",
-            "marginRight": "0",
-            "textAlign": "left",
-        })
+        base_style.update(
+            {
+                "marginLeft": "20%",
+                "marginRight": "0",
+                "textAlign": "left",
+            }
+        )
 
     return base_style
 
@@ -171,7 +175,7 @@ def _highlight_matches_safe(text: str, query: str) -> list:
     for match in re.finditer(escaped_query, text, re.IGNORECASE):
         # Add text before the match
         if match.start() > last_end:
-            parts.append(text[last_end:match.start()])
+            parts.append(text[last_end : match.start()])
         # Add the highlighted match using Dash component
         parts.append(html.Mark(match.group()))
         last_end = match.end()
@@ -235,12 +239,14 @@ def _convert_dialog_json_to_turns(dialog_json: list[dict]) -> list[dict]:
         speaker_lower = speaker.lower()
         speaker_type = "interviewer" if "interviewer" in speaker_lower else "respondent"
 
-        turns.append({
-            "speaker": speaker,
-            "speaker_type": speaker_type,
-            "timestamp": None,  # Not preserved in rolled-up format
-            "text": item.get("text", ""),
-        })
+        turns.append(
+            {
+                "speaker": speaker,
+                "speaker_type": speaker_type,
+                "timestamp": None,  # Not preserved in rolled-up format
+                "text": item.get("text", ""),
+            }
+        )
 
     return turns
 
@@ -737,9 +743,7 @@ def create_transcript_view(recording_id: str | None = None) -> html.Div:
                                                             ),
                                                             html.P(
                                                                 "Loading transcript...",
-                                                                className=(
-                                                                    "mt-3 text-muted"
-                                                                ),
+                                                                className=("mt-3 text-muted"),
                                                             ),
                                                         ],
                                                         className="text-center py-5",
@@ -930,8 +934,7 @@ def filter_transcript(
     # Create speaker blocks with highlighting
     if matching_turns:
         speaker_blocks = [
-            _create_speaker_block(turn, search_query=search_query)
-            for turn in matching_turns
+            _create_speaker_block(turn, search_query=search_query) for turn in matching_turns
         ]
         match_suffix = "es" if total_matches != 1 else ""
         turn_suffix = "s" if len(matching_turns) != 1 else ""

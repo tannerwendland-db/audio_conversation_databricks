@@ -8,7 +8,6 @@ Task: T065 - Phase 5 (User Story 3 - Browse and Review Individual Recordings)
 """
 
 
-
 class TestSearchTranscript:
     """Test cases for search_transcript() function."""
 
@@ -227,7 +226,10 @@ class TestHighlightMatches:
         text = "The meeting was great. Another meeting is scheduled."
         result = highlight_matches(text, "meeting")
 
-        assert result == "The <mark>meeting</mark> was great. Another <mark>meeting</mark> is scheduled."
+        assert (
+            result
+            == "The <mark>meeting</mark> was great. Another <mark>meeting</mark> is scheduled."
+        )
 
     def test_case_insensitive_highlighting_preserves_case(self):
         """Highlighting should preserve original case of matched text."""

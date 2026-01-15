@@ -337,9 +337,7 @@ class TestGenerateResponseWithCitations:
             citation = result["citations"][0]
             # Citation should have some reference to the source
             assert (
-                "recording_id" in citation
-                or "recording_title" in citation
-                or "source" in citation
+                "recording_id" in citation or "recording_title" in citation or "source" in citation
             )
 
     @patch("src.services.rag._get_llm")

@@ -10,10 +10,10 @@ from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from . import Base
+
 # Use JSONB on PostgreSQL, JSON on other databases (SQLite for tests)
 JsonType = JSON().with_variant(JSONB(), "postgresql")
-
-from . import Base
 
 if TYPE_CHECKING:
     from .recording import Recording
@@ -24,9 +24,7 @@ class Transcript(Base):
 
     __tablename__ = "transcripts"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     recording_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("recordings.id", ondelete="CASCADE"),
@@ -37,14 +35,10 @@ class Transcript(Base):
     language: Mapped[str | None] = mapped_column(String(10), nullable=True)
     diarized_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     dialog_json: Mapped[list[dict] | None] = mapped_column(JsonType, nullable=True)
-    reconstructed_dialog_json: Mapped[list[dict] | None] = mapped_column(
-        JsonType, nullable=True
-    )
+    reconstructed_dialog_json: Mapped[list[dict] | None] = mapped_column(JsonType, nullable=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()
     )
 
-    recording: Mapped[Recording] = relationship(
-        "Recording", back_populates="transcript"
-    )
+    recording: Mapped[Recording] = relationship("Recording", back_populates="transcript")

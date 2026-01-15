@@ -204,9 +204,7 @@ def store_transcript_chunks(
         embeddings_model = _get_embeddings_model()
         embeddings = embeddings_model.embed_documents(chunks)
 
-        logger.debug(
-            f"Generated {len(embeddings)} embeddings for recording {recording_id}"
-        )
+        logger.debug(f"Generated {len(embeddings)} embeddings for recording {recording_id}")
 
         # Create TranscriptChunk objects
         chunk_objects = []
@@ -226,10 +224,7 @@ def store_transcript_chunks(
         session.add_all(chunk_objects)
         session.flush()
 
-        logger.info(
-            f"Stored {len(chunk_objects)} transcript chunks "
-            f"for recording {recording_id}"
-        )
+        logger.info(f"Stored {len(chunk_objects)} transcript chunks for recording {recording_id}")
         return len(chunk_objects)
 
     except Exception as e:
@@ -300,9 +295,7 @@ def similarity_search(
                 ORDER BY embedding <=> :query_embedding
                 LIMIT :k
             """)
-            result = session.execute(
-                stmt, {"query_embedding": embedding_str, "k": k}
-            )
+            result = session.execute(stmt, {"query_embedding": embedding_str, "k": k})
 
         # Convert rows to TranscriptChunk objects
         chunks = []
@@ -322,9 +315,7 @@ def similarity_search(
         if chunks:
             chunk_recording_ids = list(set(c.recording_id for c in chunks))
             recordings = (
-                session.query(Recording)
-                .filter(Recording.id.in_(chunk_recording_ids))
-                .all()
+                session.query(Recording).filter(Recording.id.in_(chunk_recording_ids)).all()
             )
             recording_map = {r.id: r for r in recordings}
             for chunk in chunks:

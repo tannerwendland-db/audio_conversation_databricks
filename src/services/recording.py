@@ -270,13 +270,9 @@ def calculate_processing_progress(recording: Recording) -> dict:
         }
 
     elif status == ProcessingStatus.EMBEDDING.value:
-        embedding_elapsed = max(
-            elapsed_seconds - converting_duration - diarizing_duration, 0
-        )
+        embedding_elapsed = max(elapsed_seconds - converting_duration - diarizing_duration, 0)
         phase_progress = (embedding_elapsed / embedding_duration) * 100
-        overall_progress = EMBEDDING_START + (phase_progress / 100) * (
-            100 - EMBEDDING_START
-        )
+        overall_progress = EMBEDDING_START + (phase_progress / 100) * (100 - EMBEDDING_START)
         remaining = max(embedding_duration - embedding_elapsed, 0)
         return {
             "progress_percent": min(overall_progress, 100),
@@ -336,13 +332,7 @@ def list_recordings(
     column = getattr(Recording, sort_by)
     order_func = column.asc() if sort_order == "asc" else column.desc()
 
-    return (
-        session.query(Recording)
-        .order_by(order_func)
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    return session.query(Recording).order_by(order_func).offset(offset).limit(limit).all()
 
 
 def _update_recording_with_error(
@@ -425,8 +415,7 @@ def process_recording(
         # Step 2: Convert to WAV and get duration
         wav_bytes, duration_seconds = convert_to_wav(audio_bytes)
         logger.info(
-            f"Recording {recording_id}: Converted to WAV, "
-            f"duration: {duration_seconds:.2f}s"
+            f"Recording {recording_id}: Converted to WAV, duration: {duration_seconds:.2f}s"
         )
 
         # Step 3: Update duration
@@ -463,9 +452,7 @@ def process_recording(
 
         # Step 8: Parse and roll up dialog into structured JSON
         dialog_json = process_dialog(dialog_text or "")
-        logger.debug(
-            f"Recording {recording_id}: Parsed {len(dialog_json)} speaker turns"
-        )
+        logger.debug(f"Recording {recording_id}: Parsed {len(dialog_json)} speaker turns")
 
         # Step 8.5: Reconstruct transcript using LLM to align clean text with speakers
         reconstructed_dialog_json = reconstruct_transcript(
@@ -496,9 +483,7 @@ def process_recording(
 
         # Step 11: Chunk the dialog with speaker context
         # Prefer reconstructed_dialog_json for embedding (cleaner text = better search)
-        embedding_source = (
-            reconstructed_dialog_json if reconstructed_dialog_json else dialog_json
-        )
+        embedding_source = reconstructed_dialog_json if reconstructed_dialog_json else dialog_json
         chunks = chunk_dialog(embedding_source)
         logger.debug(
             f"Recording {recording_id}: Created {len(chunks)} chunks from "
@@ -512,9 +497,7 @@ def process_recording(
             chunks=chunks,
             title=recording.title,
         )
-        logger.info(
-            f"Recording {recording_id}: Stored {stored_count} transcript chunks"
-        )
+        logger.info(f"Recording {recording_id}: Stored {stored_count} transcript chunks")
 
         # Step 13: Update status to COMPLETED
         recording.processing_status = ProcessingStatus.COMPLETED.value
@@ -662,9 +645,7 @@ def save_speaker_embeddings(
     # Delete existing embeddings first (replace semantics)
     deleted_count = delete_speaker_embeddings(session, recording_id)
     if deleted_count > 0:
-        logger.debug(
-            f"Deleted {deleted_count} existing embeddings for recording {recording_id}"
-        )
+        logger.debug(f"Deleted {deleted_count} existing embeddings for recording {recording_id}")
 
     # Create new embedding records
     created_embeddings = []
@@ -704,16 +685,10 @@ def delete_speaker_embeddings(
     Returns:
         Number of embeddings deleted.
     """
-    deleted_count = (
-        session.query(SpeakerEmbedding)
-        .filter_by(recording_id=recording_id)
-        .delete()
-    )
+    deleted_count = session.query(SpeakerEmbedding).filter_by(recording_id=recording_id).delete()
     session.commit()
 
     if deleted_count > 0:
-        logger.debug(
-            f"Deleted {deleted_count} speaker embeddings for recording {recording_id}"
-        )
+        logger.debug(f"Deleted {deleted_count} speaker embeddings for recording {recording_id}")
 
     return deleted_count

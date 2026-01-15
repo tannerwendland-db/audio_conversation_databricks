@@ -109,15 +109,12 @@ def validate_file_format(filename: str, file_size: int) -> bool:
     extension = "." + filename.rsplit(".", 1)[-1].lower()
     if extension not in ALLOWED_FORMATS:
         raise AudioValidationError(
-            f"Invalid format: '{extension}' is not supported. "
-            f"Allowed formats: {ALLOWED_FORMATS}"
+            f"Invalid format: '{extension}' is not supported. Allowed formats: {ALLOWED_FORMATS}"
         )
 
     # Validate file size
     if file_size <= 0:
-        raise AudioValidationError(
-            "Invalid file size: file size must be greater than 0"
-        )
+        raise AudioValidationError("Invalid file size: file size must be greater than 0")
 
     if file_size > MAX_FILE_SIZE:
         raise AudioValidationError(
@@ -330,9 +327,7 @@ def _match_speakers_to_reference(
                 continue
 
             similarity = _compute_cosine_similarity(chunk_vec, ref_vec)
-            logger.debug(
-                f"Similarity between {chunk_label} and {ref_label}: {similarity:.4f}"
-            )
+            logger.debug(f"Similarity between {chunk_label} and {ref_label}: {similarity:.4f}")
 
             if similarity > SPEAKER_SIMILARITY_THRESHOLD and similarity > best_similarity:
                 best_match = ref_label
@@ -342,15 +337,12 @@ def _match_speakers_to_reference(
             label_mapping[chunk_label] = best_match
             used_reference_labels.add(best_match)
             logger.info(
-                f"Matched speaker {chunk_label} to {best_match} "
-                f"(similarity: {best_similarity:.4f})"
+                f"Matched speaker {chunk_label} to {best_match} (similarity: {best_similarity:.4f})"
             )
         else:
             # No match found - keep original label
             label_mapping[chunk_label] = chunk_label
-            logger.info(
-                f"No match for speaker {chunk_label} - treating as new speaker"
-            )
+            logger.info(f"No match for speaker {chunk_label} - treating as new speaker")
 
     return label_mapping
 
@@ -389,10 +381,7 @@ def _diarize_single_chunk(
         )
 
     # Call the serving endpoint
-    response = client.serving_endpoints.query(
-        name=endpoint_name,
-        dataframe_records=[request_data]
-    )
+    response = client.serving_endpoints.query(name=endpoint_name, dataframe_records=[request_data])
 
     # Validate response format
     if response.predictions is None:
@@ -441,8 +430,7 @@ def _diarize_single_chunk(
         try:
             speaker_embeddings = json.loads(prediction["speaker_embeddings"])
             logger.debug(
-                f"Chunk {chunk_index}: Extracted embeddings for "
-                f"{len(speaker_embeddings)} speakers"
+                f"Chunk {chunk_index}: Extracted embeddings for {len(speaker_embeddings)} speakers"
             )
         except (json.JSONDecodeError, TypeError) as e:
             logger.warning(f"Failed to parse speaker_embeddings: {e}")
@@ -500,9 +488,7 @@ def diarize_audio(wav_bytes: bytes | None) -> DiarizeResponse:
             if max_chunk_duration is None:
                 # Audio fits within endpoint limit - send as single request
                 chunks = [wav_bytes]
-                logger.info(
-                    "Processing full audio as single request (chunking disabled)"
-                )
+                logger.info("Processing full audio as single request (chunking disabled)")
             else:
                 # Audio too large - chunk to maximum safe size
                 chunks = split_audio_into_chunks(wav_bytes, max_chunk_duration)
@@ -557,9 +543,7 @@ def diarize_audio(wav_bytes: bytes | None) -> DiarizeResponse:
                     for label, embedding in result.speaker_embeddings.items():
                         if label not in reference_embeddings:
                             reference_embeddings[label] = embedding
-                            logger.info(
-                                f"Chunk {i}: Added new speaker {label} to reference"
-                            )
+                            logger.info(f"Chunk {i}: Added new speaker {label} to reference")
 
         # Combine all dialogs and transcriptions
         combined_dialog = "\n".join(dialogs)

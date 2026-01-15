@@ -74,9 +74,7 @@ class TestSaveSpearkerEmbeddings:
         save_speaker_embeddings(db_session, recording.id, initial_embeddings)
 
         # Verify initial count
-        count = db_session.query(SpeakerEmbedding).filter_by(
-            recording_id=recording.id
-        ).count()
+        count = db_session.query(SpeakerEmbedding).filter_by(recording_id=recording.id).count()
         assert count == 1
 
         # Save new embeddings (should replace)
@@ -89,9 +87,9 @@ class TestSaveSpearkerEmbeddings:
 
         # Verify new count - should be 3, not 4
         assert len(result) == 3
-        final_count = db_session.query(SpeakerEmbedding).filter_by(
-            recording_id=recording.id
-        ).count()
+        final_count = (
+            db_session.query(SpeakerEmbedding).filter_by(recording_id=recording.id).count()
+        )
         assert final_count == 3
 
     def test_save_embeddings_with_empty_dict(self, db_session: Session):
@@ -150,9 +148,9 @@ class TestDeleteSpeakerEmbeddings:
         db_session.commit()
 
         # Verify embeddings exist
-        count_before = db_session.query(SpeakerEmbedding).filter_by(
-            recording_id=recording.id
-        ).count()
+        count_before = (
+            db_session.query(SpeakerEmbedding).filter_by(recording_id=recording.id).count()
+        )
         assert count_before == 3
 
         # Delete embeddings
@@ -160,9 +158,9 @@ class TestDeleteSpeakerEmbeddings:
 
         # Verify deletion
         assert deleted_count == 3
-        count_after = db_session.query(SpeakerEmbedding).filter_by(
-            recording_id=recording.id
-        ).count()
+        count_after = (
+            db_session.query(SpeakerEmbedding).filter_by(recording_id=recording.id).count()
+        )
         assert count_after == 0
 
     def test_delete_embeddings_returns_zero_when_none_exist(self, db_session: Session):
@@ -222,13 +220,9 @@ class TestDeleteSpeakerEmbeddings:
         delete_speaker_embeddings(db_session, recording1.id)
 
         # Verify recording1 embeddings are deleted
-        count1 = db_session.query(SpeakerEmbedding).filter_by(
-            recording_id=recording1.id
-        ).count()
+        count1 = db_session.query(SpeakerEmbedding).filter_by(recording_id=recording1.id).count()
         assert count1 == 0
 
         # Verify recording2 embeddings are intact
-        count2 = db_session.query(SpeakerEmbedding).filter_by(
-            recording_id=recording2.id
-        ).count()
+        count2 = db_session.query(SpeakerEmbedding).filter_by(recording_id=recording2.id).count()
         assert count2 == 1

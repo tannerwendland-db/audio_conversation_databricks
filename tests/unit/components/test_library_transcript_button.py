@@ -8,8 +8,7 @@ and these tests are expected to fail initially.
 """
 
 from datetime import datetime
-from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -62,6 +61,7 @@ class TestViewTranscriptButtonRendering:
         recording.duration_seconds = 1800.0
         recording.processing_status = ProcessingStatus.DIARIZING.value
         recording.created_at = datetime(2024, 1, 15, 10, 30, 0)
+        recording.processing_started_at = None
         recording.error_message = None
         recording.transcript = None
         return recording
@@ -78,10 +78,9 @@ class TestViewTranscriptButtonRendering:
         card_str = str(card)
 
         # The button should contain "View Transcript" text or have appropriate ID
-        assert (
-            "view-transcript" in card_str.lower()
-            or "View Transcript" in card_str
-        ), "View Transcript button should be rendered for completed recordings"
+        assert "view-transcript" in card_str.lower() or "View Transcript" in card_str, (
+            "View Transcript button should be rendered for completed recordings"
+        )
 
     def test_view_transcript_button_has_correct_id_pattern(
         self, completed_recording_mock: MagicMock
@@ -93,11 +92,10 @@ class TestViewTranscriptButtonRendering:
         card_str = str(card)
 
         # Button should have a pattern-matching ID with the recording ID
-        expected_id_pattern = f"view-transcript-btn"
-        assert (
-            expected_id_pattern in card_str
-            or "view-transcript" in card_str.lower()
-        ), f"Button should have ID pattern containing 'view-transcript'"
+        expected_id_pattern = "view-transcript-btn"
+        assert expected_id_pattern in card_str or "view-transcript" in card_str.lower(), (
+            "Button should have ID pattern containing 'view-transcript'"
+        )
 
     def test_view_transcript_button_not_rendered_for_pending_recording(
         self, pending_recording_mock: MagicMock
@@ -109,9 +107,9 @@ class TestViewTranscriptButtonRendering:
         card_str = str(card)
 
         # The button should NOT be present for non-completed recordings
-        assert (
-            "View Transcript" not in card_str
-        ), "View Transcript button should NOT be rendered for pending recordings"
+        assert "View Transcript" not in card_str, (
+            "View Transcript button should NOT be rendered for pending recordings"
+        )
 
     def test_view_transcript_button_not_rendered_for_processing_recording(
         self, diarizing_recording_mock: MagicMock
@@ -123,9 +121,9 @@ class TestViewTranscriptButtonRendering:
         card_str = str(card)
 
         # The button should NOT be present for recordings still being processed
-        assert (
-            "View Transcript" not in card_str
-        ), "View Transcript button should NOT be rendered for processing recordings"
+        assert "View Transcript" not in card_str, (
+            "View Transcript button should NOT be rendered for processing recordings"
+        )
 
     def test_view_transcript_button_is_disabled_without_transcript(
         self, completed_recording_mock: MagicMock
@@ -142,9 +140,9 @@ class TestViewTranscriptButtonRendering:
         # Either the button should not be rendered, or it should be disabled
         # when there's no transcript data
         if "View Transcript" in card_str:
-            assert (
-                "disabled" in card_str.lower()
-            ), "View Transcript button should be disabled when no transcript exists"
+            assert "disabled" in card_str.lower(), (
+                "View Transcript button should be disabled when no transcript exists"
+            )
 
 
 class TestViewTranscriptButtonNavigation:

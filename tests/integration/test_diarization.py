@@ -31,10 +31,12 @@ class TestDiarizeAudioSuccess:
             with patch("src.services.audio.WorkspaceClient") as mock_ws_class:
                 mock_ws_class.return_value = mock_databricks_client
                 mock_databricks_client.serving_endpoints.query.return_value = MagicMock(
-                    predictions=[{
-                        "dialog": "Interviewer: Hello\nRespondent: Hi",
-                        "transcription": "Hello Hi"
-                    }]
+                    predictions=[
+                        {
+                            "dialog": "Interviewer: Hello\nRespondent: Hi",
+                            "transcription": "Hello Hi",
+                        }
+                    ]
                 )
 
                 diarize_audio(wav_bytes)
@@ -44,9 +46,7 @@ class TestDiarizeAudioSuccess:
                 call_kwargs = mock_databricks_client.serving_endpoints.query.call_args
                 assert call_kwargs.kwargs.get("name") == test_settings.DIARIZATION_ENDPOINT
 
-    def test_diarize_audio_sends_base64_encoded_wav(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_audio_sends_base64_encoded_wav(self, mock_databricks_client: MagicMock):
         """Test that diarize_audio sends WAV bytes as base64 in correct format."""
         from src.services.audio import diarize_audio
 
@@ -58,10 +58,12 @@ class TestDiarizeAudioSuccess:
             with patch("src.services.audio.WorkspaceClient") as mock_ws_class:
                 mock_ws_class.return_value = mock_databricks_client
                 mock_databricks_client.serving_endpoints.query.return_value = MagicMock(
-                    predictions=[{
-                        "dialog": "Interviewer: Hello\nRespondent: Hi",
-                        "transcription": "Hello Hi"
-                    }]
+                    predictions=[
+                        {
+                            "dialog": "Interviewer: Hello\nRespondent: Hi",
+                            "transcription": "Hello Hi",
+                        }
+                    ]
                 )
 
                 diarize_audio(wav_bytes)
@@ -74,9 +76,7 @@ class TestDiarizeAudioSuccess:
                 assert len(dataframe_records) == 1
                 assert dataframe_records[0]["audio_base64"] == expected_base64
 
-    def test_diarize_audio_parses_response_correctly(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_audio_parses_response_correctly(self, mock_databricks_client: MagicMock):
         """Test that diarize_audio correctly parses the endpoint response."""
         from src.services.audio import diarize_audio
 
@@ -89,10 +89,9 @@ class TestDiarizeAudioSuccess:
             with patch("src.services.audio.WorkspaceClient") as mock_ws_class:
                 mock_ws_class.return_value = mock_databricks_client
                 mock_databricks_client.serving_endpoints.query.return_value = MagicMock(
-                    predictions=[{
-                        "dialog": expected_dialog,
-                        "transcription": expected_transcription
-                    }]
+                    predictions=[
+                        {"dialog": expected_dialog, "transcription": expected_transcription}
+                    ]
                 )
 
                 result = diarize_audio(wav_bytes)
@@ -102,9 +101,7 @@ class TestDiarizeAudioSuccess:
                 assert result.transcription == expected_transcription
                 assert result.error is None
 
-    def test_diarize_audio_returns_diarized_text_string(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_audio_returns_diarized_text_string(self, mock_databricks_client: MagicMock):
         """Test that diarize_audio returns the diarized text as a string."""
         from src.services.audio import diarize_audio
 
@@ -125,10 +122,7 @@ class TestDiarizeAudioSuccess:
             with patch("src.services.audio.WorkspaceClient") as mock_ws_class:
                 mock_ws_class.return_value = mock_databricks_client
                 mock_databricks_client.serving_endpoints.query.return_value = MagicMock(
-                    predictions=[{
-                        "dialog": dialog,
-                        "transcription": transcription
-                    }]
+                    predictions=[{"dialog": dialog, "transcription": transcription}]
                 )
 
                 result = diarize_audio(wav_bytes)
@@ -141,9 +135,7 @@ class TestDiarizeAudioSuccess:
 class TestDiarizeAudioErrorHandling:
     """Test cases for diarize_audio error handling."""
 
-    def test_diarize_audio_handles_error_response(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_audio_handles_error_response(self, mock_databricks_client: MagicMock):
         """Test that diarize_audio handles error responses from the endpoint."""
         from src.services.audio import diarize_audio
 
@@ -164,9 +156,7 @@ class TestDiarizeAudioErrorHandling:
                 assert result.error is not None
                 assert "Model inference failed" in result.error
 
-    def test_diarize_audio_handles_endpoint_exception(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_audio_handles_endpoint_exception(self, mock_databricks_client: MagicMock):
         """Test that diarize_audio handles exceptions from the endpoint."""
         from src.services.audio import diarize_audio
 
@@ -186,9 +176,7 @@ class TestDiarizeAudioErrorHandling:
                 assert result.error is not None
                 assert "Connection timeout" in result.error
 
-    def test_diarize_audio_handles_invalid_response_format(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_audio_handles_invalid_response_format(self, mock_databricks_client: MagicMock):
         """Test that diarize_audio handles invalid response formats gracefully."""
         from src.services.audio import diarize_audio
 
@@ -206,9 +194,7 @@ class TestDiarizeAudioErrorHandling:
             assert result.status == "error"
             assert result.error is not None
 
-    def test_diarize_audio_handles_empty_predictions(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_audio_handles_empty_predictions(self, mock_databricks_client: MagicMock):
         """Test that diarize_audio handles empty predictions list."""
         from src.services.audio import diarize_audio
 
@@ -216,9 +202,7 @@ class TestDiarizeAudioErrorHandling:
 
         with patch("src.services.audio.WorkspaceClient") as mock_ws_class:
             mock_ws_class.return_value = mock_databricks_client
-            mock_databricks_client.serving_endpoints.query.return_value = MagicMock(
-                predictions=[]
-            )
+            mock_databricks_client.serving_endpoints.query.return_value = MagicMock(predictions=[])
 
             result = diarize_audio(wav_bytes)
 
@@ -245,9 +229,7 @@ class TestDiarizeAudioErrorHandling:
             assert result.status == "error"
             assert result.error is not None
 
-    def test_diarize_audio_handles_empty_audio_bytes(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_audio_handles_empty_audio_bytes(self, mock_databricks_client: MagicMock):
         """Test that diarize_audio handles empty audio bytes input."""
         from src.services.audio import diarize_audio
 
@@ -263,9 +245,7 @@ class TestDiarizeAudioErrorHandling:
             # Should not call the endpoint with empty bytes
             mock_databricks_client.serving_endpoints.query.assert_not_called()
 
-    def test_diarize_audio_handles_none_audio_bytes(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_audio_handles_none_audio_bytes(self, mock_databricks_client: MagicMock):
         """Test that diarize_audio handles None audio bytes input."""
         from src.services.audio import diarize_audio
 
@@ -283,9 +263,7 @@ class TestDiarizeAudioErrorHandling:
 class TestDiarizeAudioResponseFormat:
     """Test cases for validating the DiarizeResponse structure."""
 
-    def test_diarize_response_has_required_fields(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_response_has_required_fields(self, mock_databricks_client: MagicMock):
         """Test that the response object has all required fields per api.yaml contract."""
         from src.services.audio import diarize_audio
 
@@ -294,10 +272,7 @@ class TestDiarizeAudioResponseFormat:
         with patch("src.services.audio.WorkspaceClient") as mock_ws_class:
             mock_ws_class.return_value = mock_databricks_client
             mock_databricks_client.serving_endpoints.query.return_value = MagicMock(
-                predictions=[{
-                    "dialog": "Interviewer: Test",
-                    "transcription": "Test"
-                }]
+                predictions=[{"dialog": "Interviewer: Test", "transcription": "Test"}]
             )
 
             result = diarize_audio(wav_bytes)
@@ -308,9 +283,7 @@ class TestDiarizeAudioResponseFormat:
             assert hasattr(result, "status")
             assert hasattr(result, "error")
 
-    def test_diarize_response_status_is_valid_enum(
-        self, mock_databricks_client: MagicMock
-    ):
+    def test_diarize_response_status_is_valid_enum(self, mock_databricks_client: MagicMock):
         """Test that status field contains valid enum value."""
         from src.services.audio import diarize_audio
 
@@ -319,10 +292,7 @@ class TestDiarizeAudioResponseFormat:
         with patch("src.services.audio.WorkspaceClient") as mock_ws_class:
             mock_ws_class.return_value = mock_databricks_client
             mock_databricks_client.serving_endpoints.query.return_value = MagicMock(
-                predictions=[{
-                    "dialog": "Interviewer: Test",
-                    "transcription": "Test"
-                }]
+                predictions=[{"dialog": "Interviewer: Test", "transcription": "Test"}]
             )
 
             result = diarize_audio(wav_bytes)

@@ -48,9 +48,7 @@ def _validate_dialog_structure(data: Any) -> bool:
     return True
 
 
-def _create_reconstruction_prompt(
-    full_text: str, dialog_json: list[dict[str, Any]]
-) -> str:
+def _create_reconstruction_prompt(full_text: str, dialog_json: list[dict[str, Any]]) -> str:
     """Create the LLM prompt for transcript reconstruction.
 
     Args:
@@ -143,14 +141,10 @@ def reconstruct_transcript(
 
         # Validate structure
         if not _validate_dialog_structure(reconstructed):
-            logger.warning(
-                "LLM returned invalid dialog structure, falling back to original"
-            )
+            logger.warning("LLM returned invalid dialog structure, falling back to original")
             return dialog_json
 
-        logger.info(
-            f"Successfully reconstructed transcript with {len(reconstructed)} turns"
-        )
+        logger.info(f"Successfully reconstructed transcript with {len(reconstructed)} turns")
         return reconstructed
 
     except json.JSONDecodeError as e:

@@ -161,9 +161,7 @@ def display_page(pathname: str | None) -> dbc.Container:
         The appropriate page content component.
     """
     # Handle /recording/{id} and /transcript/{id} routes (both show transcript view)
-    if pathname and (
-        pathname.startswith("/recording/") or pathname.startswith("/transcript/")
-    ):
+    if pathname and (pathname.startswith("/recording/") or pathname.startswith("/transcript/")):
         recording_id = pathname.split("/")[-1]
         # Validate UUID format before proceeding
         if UUID_PATTERN.match(recording_id):

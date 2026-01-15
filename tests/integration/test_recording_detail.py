@@ -30,9 +30,7 @@ class TestGetTranscriptByRecordingId:
         assert result.id == sample_transcript.id
         assert result.recording_id == sample_recording.id
 
-    def test_returns_none_for_nonexistent_recording_id(
-        self, db_session: Session
-    ) -> None:
+    def test_returns_none_for_nonexistent_recording_id(self, db_session: Session) -> None:
         """Test that None is returned for a recording ID that does not exist."""
         from src.services.transcript import get_transcript_by_recording_id
 
@@ -96,9 +94,7 @@ class TestGetRecordingWithTranscript:
         assert result.id == sample_recording.id
         assert result.title == sample_recording.title
 
-    def test_returns_none_for_nonexistent_recording_id(
-        self, db_session: Session
-    ) -> None:
+    def test_returns_none_for_nonexistent_recording_id(self, db_session: Session) -> None:
         """Test that None is returned for a recording ID that does not exist."""
         from src.services.recording import get_recording
 

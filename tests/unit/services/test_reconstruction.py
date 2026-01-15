@@ -45,7 +45,10 @@ class TestReconstructTranscript:
             {"speaker": "Interviewer", "text": "Can you tell us about your experience?"},
             {"speaker": "Respondent", "text": "Of course. I've been working in this field"},
             {"speaker": "Respondent", "text": "for about ten years now."},
-            {"speaker": "Respondent", "text": "The challenges we face have evolved significantly over time."},
+            {
+                "speaker": "Respondent",
+                "text": "The challenges we face have evolved significantly over time.",
+            },
         ]
 
     @pytest.fixture

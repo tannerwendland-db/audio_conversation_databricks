@@ -38,11 +38,13 @@ def search_transcript(transcript_text: str, query: str) -> list[dict]:
 
     matches = []
     for match in re.finditer(escaped_query, transcript_text, re.IGNORECASE):
-        matches.append({
-            "start": match.start(),
-            "end": match.end(),
-            "match": match.group(),
-        })
+        matches.append(
+            {
+                "start": match.start(),
+                "end": match.end(),
+                "match": match.group(),
+            }
+        )
 
     return matches
 

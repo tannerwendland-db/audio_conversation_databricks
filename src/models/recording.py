@@ -36,9 +36,7 @@ class Recording(Base):
 
     __tablename__ = "recordings"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=lambda: str(uuid4())
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
     volume_path: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -48,9 +46,7 @@ class Recording(Base):
     )
     uploaded_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    processing_started_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
-    )
+    processing_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()
     )
@@ -79,6 +75,5 @@ class Recording(Base):
     def __repr__(self) -> str:
         """Return string representation of the Recording."""
         return (
-            f"<Recording(id={self.id!r}, title={self.title!r}, "
-            f"status={self.processing_status!r})>"
+            f"<Recording(id={self.id!r}, title={self.title!r}, status={self.processing_status!r})>"
         )

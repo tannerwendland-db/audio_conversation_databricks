@@ -8,9 +8,7 @@ import re
 from typing import Any
 
 
-def _consolidate_consecutive_turns(
-    turns: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+def _consolidate_consecutive_turns(turns: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Merge consecutive turns from the same speaker into single turns.
 
     Args:

@@ -33,7 +33,7 @@ class TestSpeakerEmbeddingModel:
         )
 
         # The default function should generate an ID
-        assert embedding.id is not None or hasattr(SpeakerEmbedding.id, 'default')
+        assert embedding.id is not None or hasattr(SpeakerEmbedding.id, "default")
 
     def test_speaker_embedding_tablename(self):
         """Test that SpeakerEmbedding uses correct table name."""
@@ -42,7 +42,7 @@ class TestSpeakerEmbeddingModel:
     def test_speaker_embedding_has_recording_relationship(self):
         """Test that SpeakerEmbedding has a relationship to Recording."""
         # Check that the relationship is defined
-        assert hasattr(SpeakerEmbedding, 'recording')
+        assert hasattr(SpeakerEmbedding, "recording")
 
     def test_speaker_embedding_embedding_vector_dimension(self):
         """Test embedding vector with correct dimension (512)."""
@@ -79,4 +79,6 @@ class TestSpeakerEmbeddingModel:
         )
 
         repr_str = repr(embedding)
-        assert "SpeakerEmbedding" in repr_str or embedding.id in repr_str or "test-id" in str(repr_str)
+        assert (
+            "SpeakerEmbedding" in repr_str or embedding.id in repr_str or "test-id" in str(repr_str)
+        )

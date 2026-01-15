@@ -101,8 +101,7 @@ def format_context_with_citations(chunks: list[TranscriptChunk]) -> str:
         speaker_info = f" - {chunk.speaker}" if chunk.speaker else ""
 
         formatted_parts.append(
-            f"[Source {i}: Recording: {recording_title}{speaker_info}]\n"
-            f"{chunk.content}\n"
+            f"[Source {i}: Recording: {recording_title}{speaker_info}]\n{chunk.content}\n"
         )
 
     return "\n".join(formatted_parts)
@@ -206,7 +205,7 @@ def _grade_node(state: RAGAgentState) -> dict[str, Any]:
 
     # Build context from retrieved docs
     docs_text = "\n\n".join(
-        f"Document {i+1}: {doc.content}" for i, doc in enumerate(retrieved_docs)
+        f"Document {i + 1}: {doc.content}" for i, doc in enumerate(retrieved_docs)
     )
 
     # Create grading prompt
@@ -332,9 +331,7 @@ def _rewrite_node(state: RAGAgentState) -> dict[str, Any]:
         response = llm.invoke([HumanMessage(content=rewrite_prompt)])
         rewritten_query = response.content.strip()
 
-        logger.debug(
-            f"Rewrote query: {original_query[:50]}... -> {rewritten_query[:50]}..."
-        )
+        logger.debug(f"Rewrote query: {original_query[:50]}... -> {rewritten_query[:50]}...")
 
         return {"messages": [HumanMessage(content=rewritten_query)]}
 

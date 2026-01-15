@@ -374,7 +374,9 @@ class TestGetAudioDuration:
             with pytest.raises(AudioProcessingError) as exc_info:
                 get_audio_duration(invalid_data)
 
-            assert "duration" in str(exc_info.value).lower() or "audio" in str(exc_info.value).lower()
+            assert (
+                "duration" in str(exc_info.value).lower() or "audio" in str(exc_info.value).lower()
+            )
 
     def test_get_duration_handles_empty_data(self) -> None:
         """Test that get_audio_duration raises error for empty data."""
@@ -446,5 +448,3 @@ class TestAudioProcessingError:
         error = AudioProcessingError(error_message)
 
         assert str(error) == error_message
-
-

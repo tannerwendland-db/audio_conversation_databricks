@@ -150,9 +150,7 @@ class TestCascadeDeleteIntegration:
         # Verify chunks exist
         recording_id = sample_recording.id
         chunks_before = (
-            db_session.query(TranscriptChunk)
-            .filter_by(recording_id=recording_id)
-            .count()
+            db_session.query(TranscriptChunk).filter_by(recording_id=recording_id).count()
         )
         assert chunks_before == 3
 
@@ -162,9 +160,7 @@ class TestCascadeDeleteIntegration:
 
         # Verify chunks are also deleted
         chunks_after = (
-            db_session.query(TranscriptChunk)
-            .filter_by(recording_id=recording_id)
-            .count()
+            db_session.query(TranscriptChunk).filter_by(recording_id=recording_id).count()
         )
         assert chunks_after == 0
 
@@ -202,9 +198,7 @@ class TestDeleteRecordingChunksIntegration:
 
         # Verify chunks exist
         assert (
-            db_session.query(TranscriptChunk)
-            .filter_by(recording_id=sample_recording.id)
-            .count()
+            db_session.query(TranscriptChunk).filter_by(recording_id=sample_recording.id).count()
             == 2
         )
 
@@ -213,9 +207,7 @@ class TestDeleteRecordingChunksIntegration:
 
         assert deleted_count == 2
         assert (
-            db_session.query(TranscriptChunk)
-            .filter_by(recording_id=sample_recording.id)
-            .count()
+            db_session.query(TranscriptChunk).filter_by(recording_id=sample_recording.id).count()
             == 0
         )
 
@@ -248,7 +240,5 @@ class TestEmbeddingModelConfiguration:
 
         result = _get_embeddings_model()
 
-        mock_embeddings_class.assert_called_once_with(
-            endpoint=test_settings.EMBEDDING_ENDPOINT
-        )
+        mock_embeddings_class.assert_called_once_with(endpoint=test_settings.EMBEDDING_ENDPOINT)
         assert result is mock_embeddings_instance

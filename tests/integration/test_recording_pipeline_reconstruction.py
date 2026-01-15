@@ -18,8 +18,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.orm import Session
 
-from src.models import ProcessingStatus, Recording, Transcript
-
+from src.models import ProcessingStatus, Recording
 
 # Skip tests that require PostgreSQL JSONB support
 pytestmark = pytest.mark.skipif(
@@ -54,12 +53,9 @@ class TestRecordingPipelineReconstruction:
         response = MagicMock()
         response.status = "success"
         response.dialog = (
-            "Interviewer: Hello, thanks fer coming in today.\n"
-            "Respondent: Thank you fer having me."
+            "Interviewer: Hello, thanks fer coming in today.\nRespondent: Thank you fer having me."
         )
-        response.transcription = (
-            "Hello, thanks for coming in today. Thank you for having me."
-        )
+        response.transcription = "Hello, thanks for coming in today. Thank you for having me."
         return response
 
     @pytest.fixture
@@ -147,7 +143,10 @@ class TestRecordingPipelineReconstruction:
 
                             # Recording should still complete
                             db_session.refresh(sample_recording)
-                            assert sample_recording.processing_status == ProcessingStatus.COMPLETED.value
+                            assert (
+                                sample_recording.processing_status
+                                == ProcessingStatus.COMPLETED.value
+                            )
 
     def test_reconstruction_receives_correct_inputs(
         self,
@@ -173,8 +172,14 @@ class TestRecordingPipelineReconstruction:
                             call_args = mock_reconstruct.call_args
                             assert call_args is not None
 
-                            full_text_arg = call_args[0][0] if call_args[0] else call_args[1].get("full_text")
-                            dialog_json_arg = call_args[0][1] if len(call_args[0]) > 1 else call_args[1].get("dialog_json")
+                            full_text_arg = (
+                                call_args[0][0] if call_args[0] else call_args[1].get("full_text")
+                            )
+                            dialog_json_arg = (
+                                call_args[0][1]
+                                if len(call_args[0]) > 1
+                                else call_args[1].get("dialog_json")
+                            )
 
                             # full_text should be the raw transcription
                             assert full_text_arg == mock_diarization_response.transcription

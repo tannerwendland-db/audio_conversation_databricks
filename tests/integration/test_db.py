@@ -140,9 +140,7 @@ class TestUpdateRecordingStatus:
 
         assert updated.processing_status == ProcessingStatus.CONVERTING.value
 
-    def test_updates_status_from_converting_to_diarizing(
-        self, db_session: Session
-    ) -> None:
+    def test_updates_status_from_converting_to_diarizing(self, db_session: Session) -> None:
         """Test updating status from CONVERTING to DIARIZING."""
         from src.services.recording import update_recording_status
 
@@ -174,21 +172,13 @@ class TestUpdateRecordingStatus:
         recording_id = sample_recording_pending.id
 
         # PENDING -> CONVERTING
-        update_recording_status(
-            db_session, recording_id, ProcessingStatus.CONVERTING
-        )
+        update_recording_status(db_session, recording_id, ProcessingStatus.CONVERTING)
         # CONVERTING -> DIARIZING
-        update_recording_status(
-            db_session, recording_id, ProcessingStatus.DIARIZING
-        )
+        update_recording_status(db_session, recording_id, ProcessingStatus.DIARIZING)
         # DIARIZING -> EMBEDDING
-        update_recording_status(
-            db_session, recording_id, ProcessingStatus.EMBEDDING
-        )
+        update_recording_status(db_session, recording_id, ProcessingStatus.EMBEDDING)
         # EMBEDDING -> COMPLETED
-        updated = update_recording_status(
-            db_session, recording_id, ProcessingStatus.COMPLETED
-        )
+        updated = update_recording_status(db_session, recording_id, ProcessingStatus.COMPLETED)
 
         assert updated.processing_status == ProcessingStatus.COMPLETED.value
 

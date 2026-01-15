@@ -437,10 +437,12 @@ def populate_recording_filter_options(session_id: str | None) -> list[dict]:
         for r in recordings:
             if r.processing_status == ProcessingStatus.COMPLETED.value:
                 duration_str = _format_duration(r.duration_seconds)
-                options.append({
-                    "label": f"{r.title} ({duration_str})",
-                    "value": r.id,
-                })
+                options.append(
+                    {
+                        "label": f"{r.title} ({duration_str})",
+                        "value": r.id,
+                    }
+                )
         return options
     except Exception as e:
         logger.error(f"Failed to load recordings for filter: {e}", exc_info=True)
@@ -501,19 +503,19 @@ def handle_chat_submit(
 
     # Add user message to history
     updated_history = message_history.copy()
-    updated_history.append({
-        "role": "user",
-        "content": query,
-        "citations": [],
-    })
+    updated_history.append(
+        {
+            "role": "user",
+            "content": query,
+            "citations": [],
+        }
+    )
 
     try:
         session = get_session()
         try:
             # Invoke RAG query
-            logger.info(
-                f"Processing chat query for session {session_id}: {query[:50]}..."
-            )
+            logger.info(f"Processing chat query for session {session_id}: {query[:50]}...")
             result = rag_query(
                 session=session,
                 query=query,
@@ -525,22 +527,20 @@ def handle_chat_submit(
             citations = result.get("citations", [])
 
             # Check for no results
-            is_no_results = (
-                not citations
-                and "no relevant" in answer.lower()
-            )
+            is_no_results = not citations and "no relevant" in answer.lower()
 
             # Add assistant response to history
-            updated_history.append({
-                "role": "assistant",
-                "content": answer,
-                "citations": citations,
-                "is_no_results": is_no_results,
-            })
+            updated_history.append(
+                {
+                    "role": "assistant",
+                    "content": answer,
+                    "citations": citations,
+                    "is_no_results": is_no_results,
+                }
+            )
 
             logger.info(
-                f"Chat query completed for session {session_id} "
-                f"with {len(citations)} citations"
+                f"Chat query completed for session {session_id} with {len(citations)} citations"
             )
 
         finally:
@@ -551,12 +551,14 @@ def handle_chat_submit(
         logger.error(f"Chat query failed for session {session_id}: {e}", exc_info=True)
 
         # Add error message to history
-        updated_history.append({
-            "role": "assistant",
-            "content": error_msg,
-            "citations": [],
-            "is_error": True,
-        })
+        updated_history.append(
+            {
+                "role": "assistant",
+                "content": error_msg,
+                "citations": [],
+                "is_error": True,
+            }
+        )
 
     # Render and return
     return (
@@ -622,6 +624,7 @@ def clear_conversation(n_clicks: int | None) -> tuple[list, list, str]:
     if not n_clicks:
         # No action needed
         from dash.exceptions import PreventUpdate
+
         raise PreventUpdate
 
     logger.info("Clearing conversation history")

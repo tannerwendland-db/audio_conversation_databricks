@@ -292,7 +292,9 @@ class TestBuildRagGraph:
         build_rag_graph(session=mock_session)
 
         # Verify edges were added
-        assert mock_graph_instance.add_edge.called or mock_graph_instance.add_conditional_edges.called
+        assert (
+            mock_graph_instance.add_edge.called or mock_graph_instance.add_conditional_edges.called
+        )
 
     @patch("src.services.rag.StateGraph")
     def test_graph_has_entry_point(self, mock_state_graph: MagicMock):
@@ -682,7 +684,9 @@ class TestRAGErrorHandling:
         with pytest.raises(RAGError) as exc_info:
             _generate_node(state)
 
-        assert "generation" in str(exc_info.value).lower() or "failed" in str(exc_info.value).lower()
+        assert (
+            "generation" in str(exc_info.value).lower() or "failed" in str(exc_info.value).lower()
+        )
 
 
 class TestRAGQuery:

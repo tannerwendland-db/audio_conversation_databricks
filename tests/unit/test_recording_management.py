@@ -87,9 +87,7 @@ class TestValidateTitle:
             "     \n     ",
         ],
     )
-    def test_various_whitespace_only_strings_raise_value_error(
-        self, whitespace_title: str
-    ) -> None:
+    def test_various_whitespace_only_strings_raise_value_error(self, whitespace_title: str) -> None:
         """Test that various whitespace-only strings raise ValueError."""
         from src.services.recording import validate_title
 
@@ -197,7 +195,9 @@ class TestUpdateRecording:
     the recording is not found.
     """
 
-    def test_successful_title_update(self, db_session: Session, sample_recording: Recording) -> None:
+    def test_successful_title_update(
+        self, db_session: Session, sample_recording: Recording
+    ) -> None:
         """Test that recording title is successfully updated."""
         from src.services.recording import update_recording
 
@@ -226,7 +226,9 @@ class TestUpdateRecording:
 
         assert "not found" in str(exc_info.value).lower()
 
-    def test_validates_title_before_updating(self, db_session: Session, sample_recording: Recording) -> None:
+    def test_validates_title_before_updating(
+        self, db_session: Session, sample_recording: Recording
+    ) -> None:
         """Test that title is validated before update is performed."""
         from src.services.recording import update_recording
 

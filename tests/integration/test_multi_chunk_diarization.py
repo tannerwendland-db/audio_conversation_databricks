@@ -31,17 +31,20 @@ class TestMultiChunkDiarizationWithEmbeddings:
     def test_single_chunk_returns_embeddings(self, mock_settings, sample_embeddings):
         """Single chunk diarization should return speaker embeddings."""
         mock_response = MagicMock()
-        mock_response.predictions = [{
-            "dialog": "Interviewer: Hello\nRespondent: Hi there",
-            "transcription": "Hello Hi there",
-            "speaker_embeddings": json.dumps(sample_embeddings),
-            "status": "success",
-            "error": None,
-        }]
+        mock_response.predictions = [
+            {
+                "dialog": "Interviewer: Hello\nRespondent: Hi there",
+                "transcription": "Hello Hi there",
+                "speaker_embeddings": json.dumps(sample_embeddings),
+                "status": "success",
+                "error": None,
+            }
+        ]
 
-        with patch("src.services.audio.get_settings", return_value=mock_settings), \
-             patch("src.services.audio.WorkspaceClient") as mock_client_class:
-
+        with (
+            patch("src.services.audio.get_settings", return_value=mock_settings),
+            patch("src.services.audio.WorkspaceClient") as mock_client_class,
+        ):
             mock_client = MagicMock()
             mock_client.serving_endpoints.query.return_value = mock_response
             mock_client_class.return_value = mock_client
@@ -60,30 +63,35 @@ class TestMultiChunkDiarizationWithEmbeddings:
         """Multi-chunk diarization should maintain consistent speaker labels."""
         # Mock responses for two chunks
         chunk1_response = MagicMock()
-        chunk1_response.predictions = [{
-            "dialog": "Interviewer: Welcome to the show\nRespondent: Thank you for having me",
-            "transcription": "Welcome to the show Thank you for having me",
-            "speaker_embeddings": json.dumps(sample_embeddings),
-            "status": "success",
-            "error": None,
-        }]
+        chunk1_response.predictions = [
+            {
+                "dialog": "Interviewer: Welcome to the show\nRespondent: Thank you for having me",
+                "transcription": "Welcome to the show Thank you for having me",
+                "speaker_embeddings": json.dumps(sample_embeddings),
+                "status": "success",
+                "error": None,
+            }
+        ]
 
         # Chunk 2 - model returns with matching performed
         chunk2_response = MagicMock()
-        chunk2_response.predictions = [{
-            "dialog": "Interviewer: Let's discuss your project\nRespondent: Sure, I'd love to",
-            "transcription": "Let's discuss your project Sure, I'd love to",
-            "speaker_embeddings": json.dumps(sample_embeddings),
-            "status": "success",
-            "error": None,
-        }]
+        chunk2_response.predictions = [
+            {
+                "dialog": "Interviewer: Let's discuss your project\nRespondent: Sure, I'd love to",
+                "transcription": "Let's discuss your project Sure, I'd love to",
+                "speaker_embeddings": json.dumps(sample_embeddings),
+                "status": "success",
+                "error": None,
+            }
+        ]
 
         mock_settings.ENABLE_AUDIO_CHUNKING = True
 
-        with patch("src.services.audio.get_settings", return_value=mock_settings), \
-             patch("src.services.audio.WorkspaceClient") as mock_client_class, \
-             patch("src.services.audio.split_audio_into_chunks") as mock_split:
-
+        with (
+            patch("src.services.audio.get_settings", return_value=mock_settings),
+            patch("src.services.audio.WorkspaceClient") as mock_client_class,
+            patch("src.services.audio.split_audio_into_chunks") as mock_split,
+        ):
             mock_client = MagicMock()
             # Return different responses for each chunk
             mock_client.serving_endpoints.query.side_effect = [
@@ -120,29 +128,34 @@ class TestMultiChunkDiarizationWithEmbeddings:
     def test_combined_dialog_preserves_speaker_labels(self, mock_settings, sample_embeddings):
         """Combined dialog from multiple chunks should have consistent speaker labels."""
         chunk1_response = MagicMock()
-        chunk1_response.predictions = [{
-            "dialog": "Interviewer: Part one",
-            "transcription": "Part one",
-            "speaker_embeddings": json.dumps(sample_embeddings),
-            "status": "success",
-            "error": None,
-        }]
+        chunk1_response.predictions = [
+            {
+                "dialog": "Interviewer: Part one",
+                "transcription": "Part one",
+                "speaker_embeddings": json.dumps(sample_embeddings),
+                "status": "success",
+                "error": None,
+            }
+        ]
 
         chunk2_response = MagicMock()
-        chunk2_response.predictions = [{
-            "dialog": "Respondent: Part two",
-            "transcription": "Part two",
-            "speaker_embeddings": json.dumps(sample_embeddings),
-            "status": "success",
-            "error": None,
-        }]
+        chunk2_response.predictions = [
+            {
+                "dialog": "Respondent: Part two",
+                "transcription": "Part two",
+                "speaker_embeddings": json.dumps(sample_embeddings),
+                "status": "success",
+                "error": None,
+            }
+        ]
 
         mock_settings.ENABLE_AUDIO_CHUNKING = True
 
-        with patch("src.services.audio.get_settings", return_value=mock_settings), \
-             patch("src.services.audio.WorkspaceClient") as mock_client_class, \
-             patch("src.services.audio.split_audio_into_chunks") as mock_split:
-
+        with (
+            patch("src.services.audio.get_settings", return_value=mock_settings),
+            patch("src.services.audio.WorkspaceClient") as mock_client_class,
+            patch("src.services.audio.split_audio_into_chunks") as mock_split,
+        ):
             mock_client = MagicMock()
             mock_client.serving_endpoints.query.side_effect = [
                 chunk1_response,
@@ -175,29 +188,34 @@ class TestMultiChunkDiarizationWithEmbeddings:
         }
 
         chunk1_response = MagicMock()
-        chunk1_response.predictions = [{
-            "dialog": "Interviewer: Hello\nRespondent: Hi",
-            "transcription": "Hello Hi",
-            "speaker_embeddings": json.dumps(chunk1_embeddings),
-            "status": "success",
-            "error": None,
-        }]
+        chunk1_response.predictions = [
+            {
+                "dialog": "Interviewer: Hello\nRespondent: Hi",
+                "transcription": "Hello Hi",
+                "speaker_embeddings": json.dumps(chunk1_embeddings),
+                "status": "success",
+                "error": None,
+            }
+        ]
 
         chunk2_response = MagicMock()
-        chunk2_response.predictions = [{
-            "dialog": "Respondent2: I'm new here",
-            "transcription": "I'm new here",
-            "speaker_embeddings": json.dumps(chunk2_embeddings),
-            "status": "success",
-            "error": None,
-        }]
+        chunk2_response.predictions = [
+            {
+                "dialog": "Respondent2: I'm new here",
+                "transcription": "I'm new here",
+                "speaker_embeddings": json.dumps(chunk2_embeddings),
+                "status": "success",
+                "error": None,
+            }
+        ]
 
         mock_settings.ENABLE_AUDIO_CHUNKING = True
 
-        with patch("src.services.audio.get_settings", return_value=mock_settings), \
-             patch("src.services.audio.WorkspaceClient") as mock_client_class, \
-             patch("src.services.audio.split_audio_into_chunks") as mock_split:
-
+        with (
+            patch("src.services.audio.get_settings", return_value=mock_settings),
+            patch("src.services.audio.WorkspaceClient") as mock_client_class,
+            patch("src.services.audio.split_audio_into_chunks") as mock_split,
+        ):
             mock_client = MagicMock()
             mock_client.serving_endpoints.query.side_effect = [
                 chunk1_response,

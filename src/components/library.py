@@ -398,9 +398,7 @@ def _create_recording_card(recording: Any, is_editing: bool = False) -> dbc.Card
         card_style["cursor"] = "pointer"
 
     # For clickable cards wrapped in a Link, mb-3 is on the outer wrapper
-    card_class = (
-        "recording-card-clickable" if is_clickable and not is_editing else "mb-3"
-    )
+    card_class = "recording-card-clickable" if is_clickable and not is_editing else "mb-3"
 
     card = dbc.Card(
         dbc.CardBody(card_content),
@@ -478,9 +476,7 @@ def refresh_library(
 
             # Create a card for each recording
             recording_cards = [
-                _create_recording_card(
-                    recording, is_editing=(recording.id == editing_recording_id)
-                )
+                _create_recording_card(recording, is_editing=(recording.id == editing_recording_id))
                 for recording in recordings
             ]
 
@@ -685,10 +681,7 @@ def handle_delete_click(
     except Exception:
         title = "this recording"
 
-    modal_body = (
-        f"Are you sure you want to delete '{title}'? "
-        "This action cannot be undone."
-    )
+    modal_body = f"Are you sure you want to delete '{title}'? This action cannot be undone."
 
     return True, recording_id, modal_body
 
@@ -745,30 +738,42 @@ def handle_confirm_delete(
             delete_recording(session, recording_id)
             # Trigger a refresh by incrementing n_clicks
             new_clicks = (current_refresh_clicks or 0) + 1
-            return False, dbc.Alert(
-                "Recording deleted successfully.",
-                color="success",
-                dismissable=True,
-                duration=4000,
-            ), new_clicks
+            return (
+                False,
+                dbc.Alert(
+                    "Recording deleted successfully.",
+                    color="success",
+                    dismissable=True,
+                    duration=4000,
+                ),
+                new_clicks,
+            )
         finally:
             session.close()
     except ValueError as e:
         logger.error(f"Failed to delete recording: {e}")
-        return False, dbc.Alert(
-            f"Failed to delete recording: {e}",
-            color="danger",
-            dismissable=True,
-            duration=4000,
-        ), no_update
+        return (
+            False,
+            dbc.Alert(
+                f"Failed to delete recording: {e}",
+                color="danger",
+                dismissable=True,
+                duration=4000,
+            ),
+            no_update,
+        )
     except Exception as e:
         logger.error(f"Failed to delete recording: {e}", exc_info=True)
-        return False, dbc.Alert(
-            f"Failed to delete recording: {e}",
-            color="danger",
-            dismissable=True,
-            duration=4000,
-        ), no_update
+        return (
+            False,
+            dbc.Alert(
+                f"Failed to delete recording: {e}",
+                color="danger",
+                dismissable=True,
+                duration=4000,
+            ),
+            no_update,
+        )
 
 
 # Callback to refresh list after editing state changes

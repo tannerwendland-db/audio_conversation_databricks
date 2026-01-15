@@ -55,9 +55,7 @@ class TestDeleteRecordingIntegration:
         delete_recording(db_session, recording_id)
 
         # Verify transcript is deleted
-        queried_transcript = (
-            db_session.query(Transcript).filter_by(id=transcript_id).first()
-        )
+        queried_transcript = db_session.query(Transcript).filter_by(id=transcript_id).first()
         assert queried_transcript is None
 
         # Also verify by recording_id
@@ -89,21 +87,13 @@ class TestDeleteRecordingIntegration:
         db_session.commit()
 
         # Verify chunks exist before deletion
-        chunks_before = (
-            db_session.query(TranscriptChunk)
-            .filter_by(recording_id=recording_id)
-            .all()
-        )
+        chunks_before = db_session.query(TranscriptChunk).filter_by(recording_id=recording_id).all()
         assert len(chunks_before) == 3
 
         delete_recording(db_session, recording_id)
 
         # Verify all chunks are deleted
-        chunks_after = (
-            db_session.query(TranscriptChunk)
-            .filter_by(recording_id=recording_id)
-            .all()
-        )
+        chunks_after = db_session.query(TranscriptChunk).filter_by(recording_id=recording_id).all()
         assert chunks_after == []
 
     def test_full_cascade_delete_removes_all_associated_data(
@@ -146,13 +136,9 @@ class TestDeleteRecordingIntegration:
 
         # Verify all chunks are gone
         for chunk_id in chunk_ids:
-            assert (
-                db_session.query(TranscriptChunk).filter_by(id=chunk_id).first() is None
-            )
+            assert db_session.query(TranscriptChunk).filter_by(id=chunk_id).first() is None
 
-    def test_delete_recording_with_no_transcript(
-        self, db_session: Session
-    ) -> None:
+    def test_delete_recording_with_no_transcript(self, db_session: Session) -> None:
         """Test deleting a recording that has no associated transcript."""
         from src.services.recording import delete_recording
 
@@ -188,25 +174,16 @@ class TestDeleteRecordingIntegration:
         recording_id = sample_recording.id
 
         # Verify no chunks exist for this recording
-        chunks = (
-            db_session.query(TranscriptChunk)
-            .filter_by(recording_id=recording_id)
-            .all()
-        )
+        chunks = db_session.query(TranscriptChunk).filter_by(recording_id=recording_id).all()
         assert len(chunks) == 0
 
         result = delete_recording(db_session, recording_id)
 
         assert result is True
         assert db_session.query(Recording).filter_by(id=recording_id).first() is None
-        assert (
-            db_session.query(Transcript).filter_by(recording_id=recording_id).first()
-            is None
-        )
+        assert db_session.query(Transcript).filter_by(recording_id=recording_id).first() is None
 
-    def test_recording_not_found_raises_value_error(
-        self, db_session: Session
-    ) -> None:
+    def test_recording_not_found_raises_value_error(self, db_session: Session) -> None:
         """Test that attempting to delete a non-existent recording raises ValueError."""
         import pytest
 
@@ -243,11 +220,7 @@ class TestDeleteRecordingDatabaseState:
         delete_recording(db_session, recording_id)
 
         # Verify no orphan transcripts exist
-        all_transcripts = (
-            db_session.query(Transcript)
-            .filter_by(recording_id=recording_id)
-            .all()
-        )
+        all_transcripts = db_session.query(Transcript).filter_by(recording_id=recording_id).all()
         assert all_transcripts == []
 
     def test_foreign_key_cascade_on_chunks(
@@ -279,16 +252,10 @@ class TestDeleteRecordingDatabaseState:
         delete_recording(db_session, recording_id)
 
         # Verify no orphan chunks exist
-        all_chunks = (
-            db_session.query(TranscriptChunk)
-            .filter_by(recording_id=recording_id)
-            .all()
-        )
+        all_chunks = db_session.query(TranscriptChunk).filter_by(recording_id=recording_id).all()
         assert all_chunks == []
 
-    def test_other_recordings_unaffected_by_delete(
-        self, db_session: Session
-    ) -> None:
+    def test_other_recordings_unaffected_by_delete(self, db_session: Session) -> None:
         """Verify that deleting one recording does not affect other recordings."""
         from src.services.recording import delete_recording
 
@@ -355,29 +322,19 @@ class TestDeleteRecordingDatabaseState:
 
         # Verify deleted recording is gone
         assert db_session.query(Recording).filter_by(id=delete_id).first() is None
-        assert (
-            db_session.query(Transcript).filter_by(recording_id=delete_id).first()
-            is None
-        )
-        assert (
-            db_session.query(TranscriptChunk).filter_by(recording_id=delete_id).all()
-            == []
-        )
+        assert db_session.query(Transcript).filter_by(recording_id=delete_id).first() is None
+        assert db_session.query(TranscriptChunk).filter_by(recording_id=delete_id).all() == []
 
         # Verify kept recording is intact
         kept_recording = db_session.query(Recording).filter_by(id=keep_id).first()
         assert kept_recording is not None
         assert kept_recording.title == "Recording To Keep"
 
-        kept_transcript = (
-            db_session.query(Transcript).filter_by(recording_id=keep_id).first()
-        )
+        kept_transcript = db_session.query(Transcript).filter_by(recording_id=keep_id).first()
         assert kept_transcript is not None
         assert kept_transcript.full_text == "Transcript to keep"
 
-        kept_chunks = (
-            db_session.query(TranscriptChunk).filter_by(recording_id=keep_id).all()
-        )
+        kept_chunks = db_session.query(TranscriptChunk).filter_by(recording_id=keep_id).all()
         assert len(kept_chunks) == 2
 
     def test_session_state_after_successful_delete(
@@ -419,9 +376,7 @@ class TestDeleteRecordingDatabaseState:
 
         # Verify all chunks were created
         chunks_count_before = (
-            db_session.query(TranscriptChunk)
-            .filter_by(recording_id=recording_id)
-            .count()
+            db_session.query(TranscriptChunk).filter_by(recording_id=recording_id).count()
         )
         assert chunks_count_before == num_chunks
 
@@ -431,9 +386,7 @@ class TestDeleteRecordingDatabaseState:
 
         # Verify all chunks are gone
         chunks_count_after = (
-            db_session.query(TranscriptChunk)
-            .filter_by(recording_id=recording_id)
-            .count()
+            db_session.query(TranscriptChunk).filter_by(recording_id=recording_id).count()
         )
         assert chunks_count_after == 0
 
@@ -441,9 +394,7 @@ class TestDeleteRecordingDatabaseState:
 class TestDeleteRecordingErrorHandling:
     """Tests for error handling during recording deletion."""
 
-    def test_delete_with_invalid_uuid_format(
-        self, db_session: Session
-    ) -> None:
+    def test_delete_with_invalid_uuid_format(self, db_session: Session) -> None:
         """Test that invalid UUID format raises ValueError."""
         import pytest
 
@@ -469,9 +420,7 @@ class TestDeleteRecordingErrorHandling:
         assert isinstance(result, bool)
         assert result is True
 
-    def test_delete_nonexistent_raises_value_error(
-        self, db_session: Session
-    ) -> None:
+    def test_delete_nonexistent_raises_value_error(self, db_session: Session) -> None:
         """Test that deleting a non-existent recording raises ValueError."""
         import pytest
 
@@ -508,9 +457,7 @@ class TestDeleteRecordingChunksExplicit:
             db_session.add(chunk)
         db_session.commit()
 
-        with patch(
-            "src.services.recording.delete_recording_chunks"
-        ) as mock_delete_chunks:
+        with patch("src.services.recording.delete_recording_chunks") as mock_delete_chunks:
             mock_delete_chunks.return_value = 3
             delete_recording(db_session, recording_id)
 

@@ -45,11 +45,7 @@ class TestSpeakerEmbeddingCascadeDelete:
         db_session.commit()
 
         # Verify embeddings were created
-        embeddings = (
-            db_session.query(SpeakerEmbedding)
-            .filter_by(recording_id=recording.id)
-            .all()
-        )
+        embeddings = db_session.query(SpeakerEmbedding).filter_by(recording_id=recording.id).all()
         assert len(embeddings) == 2
 
         # Delete the recording
@@ -58,9 +54,7 @@ class TestSpeakerEmbeddingCascadeDelete:
 
         # Verify embeddings were cascade deleted
         remaining_embeddings = (
-            db_session.query(SpeakerEmbedding)
-            .filter_by(recording_id=recording.id)
-            .all()
+            db_session.query(SpeakerEmbedding).filter_by(recording_id=recording.id).all()
         )
         assert len(remaining_embeddings) == 0
 
@@ -97,9 +91,7 @@ class TestSpeakerEmbeddingCascadeDelete:
 
         # Verify embeddings were saved
         saved_embeddings = (
-            db_session.query(SpeakerEmbedding)
-            .filter_by(recording_id=recording.id)
-            .all()
+            db_session.query(SpeakerEmbedding).filter_by(recording_id=recording.id).all()
         )
         assert len(saved_embeddings) == 2
 
@@ -135,18 +127,12 @@ class TestSpeakerEmbeddingCascadeDelete:
         db_session.commit()
 
         # Verify initial embedding
-        embeddings = (
-            db_session.query(SpeakerEmbedding)
-            .filter_by(recording_id=recording.id)
-            .all()
-        )
+        embeddings = db_session.query(SpeakerEmbedding).filter_by(recording_id=recording.id).all()
         assert len(embeddings) == 1
         assert embeddings[0].speaker_label == "Interviewer"
 
         # Delete existing embeddings (simulating re-processing)
-        db_session.query(SpeakerEmbedding).filter_by(
-            recording_id=recording.id
-        ).delete()
+        db_session.query(SpeakerEmbedding).filter_by(recording_id=recording.id).delete()
         db_session.commit()
 
         # Save new embeddings
@@ -168,9 +154,7 @@ class TestSpeakerEmbeddingCascadeDelete:
 
         # Verify new embeddings replaced old ones
         final_embeddings = (
-            db_session.query(SpeakerEmbedding)
-            .filter_by(recording_id=recording.id)
-            .all()
+            db_session.query(SpeakerEmbedding).filter_by(recording_id=recording.id).all()
         )
         assert len(final_embeddings) == 3
 
@@ -206,7 +190,7 @@ class TestSpeakerEmbeddingCascadeDelete:
         db_session.refresh(recording)
 
         # Access embeddings through relationship
-        assert hasattr(recording, 'speaker_embeddings')
+        assert hasattr(recording, "speaker_embeddings")
         assert len(recording.speaker_embeddings) == 1
         assert recording.speaker_embeddings[0].speaker_label == "Interviewer"
 

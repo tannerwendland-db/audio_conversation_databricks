@@ -392,5 +392,3 @@ def update_processing_status(
             dbc.Alert("Failed to fetch processing status.", color="warning"),
             True,
         )
-
-
