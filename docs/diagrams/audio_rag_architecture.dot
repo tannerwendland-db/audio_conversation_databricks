@@ -1,0 +1,80 @@
+digraph AudioConversationRAG {
+    rankdir=LR;
+    compound=true;
+    splines=polyline;
+    nodesep=1.0;
+    ranksep=1.5;
+
+    // Global styling
+    node [shape=box, style="filled,rounded", fontname="Arial", fontsize=12];
+    edge [fontname="Arial", fontsize=10, color="#333333", penwidth=1.5];
+
+    // ==========================================
+    // USER
+    // ==========================================
+    user [label="User", shape=ellipse, fillcolor="#E0E0E0", width=1.2];
+
+    // ==========================================
+    // DASH APPLICATION
+    // ==========================================
+    subgraph cluster_app {
+        label="Audio Conversation RAG App";
+        labeljust=l;
+        style="filled,rounded";
+        fillcolor="#E3F2FD";
+        color="#1565C0";
+        fontname="Arial Bold";
+        fontsize=14;
+
+        dash_app [label="Dash Web App\n\nUpload | Library | Chat | Transcript", fillcolor="#BBDEFB", width=3.5, height=1.2];
+    }
+
+    // ==========================================
+    // DATABASE
+    // ==========================================
+    subgraph cluster_database {
+        label="Databricks Lakebase";
+        labeljust=l;
+        style="filled,rounded";
+        fillcolor="#FFF3E0";
+        color="#E65100";
+        fontname="Arial Bold";
+        fontsize=14;
+
+        postgres [label="PostgreSQL\n(pgvector)\n\nrecordings\ntranscripts\ntranscript_chunks\nspeaker_embeddings", shape=cylinder, fillcolor="#FFE0B2", width=2.2, height=1.8];
+    }
+
+    // ==========================================
+    // DATABRICKS PLATFORM
+    // ==========================================
+    subgraph cluster_databricks {
+        label="Databricks Model Serving";
+        labeljust=l;
+        style="filled,rounded";
+        fillcolor="#F3E5F5";
+        color="#6A1B9A";
+        fontname="Arial Bold";
+        fontsize=14;
+
+        diarization [label="Diarization Endpoint\n(Whisper + pyannote)", fillcolor="#E1BEE7", width=2.2];
+
+        embedding [label="Embedding Endpoint\n(GTE-Large)", fillcolor="#E1BEE7", width=2.2];
+
+        llm [label="LLM Endpoint\n(Claude Sonnet)", fillcolor="#E1BEE7", width=2.2];
+    }
+
+    // ==========================================
+    // CONNECTIONS
+    // ==========================================
+
+    // User to App
+    user -> dash_app [xlabel="upload audio\nask questions"];
+
+    // App to Database
+    dash_app -> postgres [xlabel="store/query\nmetadata &\nembeddings"];
+
+    // App to Databricks
+    dash_app -> diarization [xlabel="transcribe &\ndiarize"];
+    dash_app -> embedding [xlabel="generate\nembeddings"];
+    dash_app -> llm [xlabel="RAG responses"];
+}

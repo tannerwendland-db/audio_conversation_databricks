@@ -1,0 +1,79 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxGraphModel grid="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="clust1" value="&lt;font style='font-size: 14.0px;' face='Arial Bold' color='#000000'&gt;Audio Conversation RAG App&lt;/font&gt;" style="verticalAlign=top;html=1;rounded=0;labelBackgroundColor=none;strokeColor=#1565c0;fillColor=#e3f2fd;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="190.4" y="262.0" width="268.0" height="126.0" as="geometry" />
+    </mxCell>
+    <mxCell id="clust2" value="&lt;font style='font-size: 14.0px;' face='Arial Bold' color='#000000'&gt;Databricks Lakebase&lt;/font&gt;" style="verticalAlign=top;html=1;rounded=0;labelBackgroundColor=none;strokeColor=#e65100;fillColor=#fff3e0;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="553.58" y="12.0" width="174.39999999999998" height="188.0" as="geometry" />
+    </mxCell>
+    <mxCell id="clust3" value="&lt;font style='font-size: 14.0px;' face='Arial Bold' color='#000000'&gt;Databricks Model Serving&lt;/font&gt;" style="verticalAlign=top;html=1;rounded=0;labelBackgroundColor=none;strokeColor=#6a1b9a;fillColor=#f3e5f5;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="550.4" y="232.0" width="181.75" height="294.0" as="geometry" />
+    </mxCell>
+    <mxCell id="node1" value="&lt;font style='font-size: 12.0px;' face='Arial' color='#000000'&gt;Dash Web App&lt;br/&gt;Upload | Library | Chat | Transcript&lt;/font&gt;" style="verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=#bbdefb;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="198.4" y="293.8" width="251.99999999999997" height="86.39999999999998" as="geometry" />
+    </mxCell>
+    <mxCell id="node2" value="&lt;font style='font-size: 12.0px;' face='Arial' color='#000000'&gt;PostgreSQL&lt;br/&gt;(pgvector)&lt;br/&gt;recordings&lt;br/&gt;transcripts&lt;br/&gt;transcript_chunks&lt;br/&gt;speaker_embeddings&lt;/font&gt;" style="shape=cylinder;boundedLbl=1;backgroundOutline=1;verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=#ffe0b2;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="561.57" y="44.089999999999975" width="158.40999999999997" height="147.82000000000005" as="geometry" />
+    </mxCell>
+    <mxCell id="node3" value="&lt;font style='font-size: 12.0px;' face='Arial' color='#000000'&gt;Diarization Endpoint&lt;br/&gt;(Whisper + pyannote)&lt;/font&gt;" style="verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=#e1bee7;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="561.57" y="481.75" width="158.40999999999997" height="36.5" as="geometry" />
+    </mxCell>
+    <mxCell id="node4" value="&lt;font style='font-size: 12.0px;' face='Arial' color='#000000'&gt;Embedding Endpoint&lt;br/&gt;(GTE-Large)&lt;/font&gt;" style="verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=#e1bee7;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="561.57" y="372.75" width="158.40999999999997" height="36.5" as="geometry" />
+    </mxCell>
+    <mxCell id="node5" value="&lt;font style='font-size: 12.0px;' face='Arial' color='#000000'&gt;LLM Endpoint&lt;br/&gt;(Claude Sonnet)&lt;/font&gt;" style="verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=#e1bee7;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="561.57" y="263.75" width="158.40999999999997" height="36.5" as="geometry" />
+    </mxCell>
+    <mxCell id="node6" value="&lt;font style='font-size: 12.0px;' face='Arial' color='#000000'&gt;User&lt;/font&gt;" style="ellipse;verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=#e0e0e0;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="4.0" y="319.0" width="86.4" height="36.0" as="geometry" />
+    </mxCell>
+    <mxCell id="edge2" style="html=1;endArrow=block;dashed=0;endFill=1;startArrow=none;startFill=0;fillColor=#333333;strokeColor=#333333;strokeWidth=1.5;rounded=0;exitX=0.7519;exitY=0.0000;entryX=0.0000;entryY=0.9169;" parent="1" edge="1" source="node1" target="node2">
+      <mxGeometry as="geometry" relative="1">
+        <mxPoint x="387.89" y="293.47" as="sourcePoint" />
+        <mxPoint x="551.32" y="179.62" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label_edge2" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];" parent="edge2" value="&lt;font style='font-size: 10.0px;' face='Arial' color='#000000'&gt;store/query&lt;/font&gt;&lt;div&gt;&lt;font style='font-size: 10.0px;' face='Arial' color='#000000'&gt;metadata &amp;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style='font-size: 10.0px;' face='Arial' color='#000000'&gt;embeddings&lt;/font&gt;&lt;/div&gt;" vertex="1" connectable="0">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="edge3" style="html=1;endArrow=block;dashed=0;endFill=1;startArrow=none;startFill=0;fillColor=#333333;strokeColor=#333333;strokeWidth=1.5;rounded=0;exitX=0.8383;exitY=1.0000;entryX=0.1998;entryY=0.0000;" parent="1" edge="1" source="node1" target="node3">
+      <mxGeometry as="geometry" relative="1">
+        <mxPoint x="409.65" y="380.68" as="sourcePoint" />
+        <mxPoint x="593.22" y="475.86" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label_edge3" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];" parent="edge3" value="&lt;font style='font-size: 10.0px;' face='Arial' color='#000000'&gt;transcribe &amp;&lt;/font&gt;&lt;div&gt;&lt;font style='font-size: 10.0px;' face='Arial' color='#000000'&gt;diarize&lt;/font&gt;&lt;/div&gt;" vertex="1" connectable="0">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="edge4" style="html=1;endArrow=block;dashed=0;endFill=1;startArrow=none;startFill=0;fillColor=#333333;strokeColor=#333333;strokeWidth=1.5;rounded=0;exitX=1.0000;exitY=0.7488;entryX=0.0000;entryY=0.0737;" parent="1" edge="1" source="node1" target="node4">
+      <mxGeometry as="geometry" relative="1">
+        <mxPoint x="450.55" y="358.5" as="sourcePoint" />
+        <mxPoint x="549.17" y="375.44" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label_edge4" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];" parent="edge4" value="&lt;font style='font-size: 10.0px;' face='Arial' color='#000000'&gt;generate&lt;/font&gt;&lt;div&gt;&lt;font style='font-size: 10.0px;' face='Arial' color='#000000'&gt;embeddings&lt;/font&gt;&lt;/div&gt;" vertex="1" connectable="0">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="edge5" style="html=1;endArrow=block;dashed=0;endFill=1;startArrow=none;startFill=0;fillColor=#333333;strokeColor=#333333;strokeWidth=1.5;rounded=0;exitX=1.0000;exitY=0.2465;entryX=0.0000;entryY=0.9342;" parent="1" edge="1" source="node1" target="node5">
+      <mxGeometry as="geometry" relative="1">
+        <mxPoint x="450.55" y="315.1" as="sourcePoint" />
+        <mxPoint x="549.17" y="297.85" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label_edge5" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];" parent="edge5" value="&lt;font style='font-size: 10.0px;' face='Arial' color='#000000'&gt;RAG responses&lt;/font&gt;" vertex="1" connectable="0">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="edge1" style="html=1;endArrow=block;dashed=0;endFill=1;startArrow=none;startFill=0;fillColor=#333333;strokeColor=#333333;strokeWidth=1.5;rounded=0;exitX=1.0000;exitY=0.5000;entryX=0.0000;entryY=0.5000;" parent="1" edge="1" source="node6" target="node1">
+      <mxGeometry as="geometry" relative="1">
+        <mxPoint x="90.9" y="337.0" as="sourcePoint" />
+        <mxPoint x="185.92" y="337.0" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label_edge1" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];" parent="edge1" value="&lt;font style='font-size: 10.0px;' face='Arial' color='#000000'&gt;upload audio&lt;/font&gt;&lt;div&gt;&lt;font style='font-size: 10.0px;' face='Arial' color='#000000'&gt;ask questions&lt;/font&gt;&lt;/div&gt;" vertex="1" connectable="0">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+  </root>
+</mxGraphModel>
