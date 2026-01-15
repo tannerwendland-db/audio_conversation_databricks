@@ -1,0 +1,107 @@
+digraph ERD {
+    // Graph settings
+    rankdir=TB;
+    graph [fontname="Arial", splines=ortho, nodesep=0.8, ranksep=1.2];
+    node [fontname="Arial", fontsize=10];
+    edge [fontname="Arial", fontsize=9, color="#333333", penwidth=1.5];
+
+    // Recording table (central entity)
+    recordings [
+        shape=plaintext
+        label=<
+            <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" BGCOLOR="#DAE8FC">
+                <TR><TD COLSPAN="2" BGCOLOR="#6C8EBF"><B>recordings</B></TD></TR>
+                <TR><TD ALIGN="LEFT"><U>id</U></TD><TD ALIGN="LEFT">String(36) PK</TD></TR>
+                <TR><TD ALIGN="LEFT">title</TD><TD ALIGN="LEFT">String(255)</TD></TR>
+                <TR><TD ALIGN="LEFT">original_filename</TD><TD ALIGN="LEFT">String(255)</TD></TR>
+                <TR><TD ALIGN="LEFT">volume_path</TD><TD ALIGN="LEFT">String(500)</TD></TR>
+                <TR><TD ALIGN="LEFT">duration_seconds</TD><TD ALIGN="LEFT">Float</TD></TR>
+                <TR><TD ALIGN="LEFT">processing_status</TD><TD ALIGN="LEFT">String(50)</TD></TR>
+                <TR><TD ALIGN="LEFT">uploaded_by</TD><TD ALIGN="LEFT">String(255)</TD></TR>
+                <TR><TD ALIGN="LEFT">error_message</TD><TD ALIGN="LEFT">Text</TD></TR>
+                <TR><TD ALIGN="LEFT">processing_started_at</TD><TD ALIGN="LEFT">DateTime</TD></TR>
+                <TR><TD ALIGN="LEFT">created_at</TD><TD ALIGN="LEFT">DateTime</TD></TR>
+                <TR><TD ALIGN="LEFT">updated_at</TD><TD ALIGN="LEFT">DateTime</TD></TR>
+            </TABLE>
+        >
+    ];
+
+    // Transcript table (1-to-1 with recordings)
+    transcripts [
+        shape=plaintext
+        label=<
+            <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" BGCOLOR="#D5E8D4">
+                <TR><TD COLSPAN="2" BGCOLOR="#82B366"><B>transcripts</B></TD></TR>
+                <TR><TD ALIGN="LEFT"><U>id</U></TD><TD ALIGN="LEFT">String(36) PK</TD></TR>
+                <TR><TD ALIGN="LEFT"><I>recording_id</I></TD><TD ALIGN="LEFT">String(36) FK UNIQUE</TD></TR>
+                <TR><TD ALIGN="LEFT">full_text</TD><TD ALIGN="LEFT">Text</TD></TR>
+                <TR><TD ALIGN="LEFT">language</TD><TD ALIGN="LEFT">String(10)</TD></TR>
+                <TR><TD ALIGN="LEFT">diarized_text</TD><TD ALIGN="LEFT">Text</TD></TR>
+                <TR><TD ALIGN="LEFT">dialog_json</TD><TD ALIGN="LEFT">JSONB</TD></TR>
+                <TR><TD ALIGN="LEFT">reconstructed_dialog_json</TD><TD ALIGN="LEFT">JSONB</TD></TR>
+                <TR><TD ALIGN="LEFT">summary</TD><TD ALIGN="LEFT">Text</TD></TR>
+                <TR><TD ALIGN="LEFT">created_at</TD><TD ALIGN="LEFT">DateTime</TD></TR>
+            </TABLE>
+        >
+    ];
+
+    // TranscriptChunk table (many-to-1 with recordings)
+    transcript_chunks [
+        shape=plaintext
+        label=<
+            <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" BGCOLOR="#FFE6CC">
+                <TR><TD COLSPAN="2" BGCOLOR="#D79B00"><B>transcript_chunks</B></TD></TR>
+                <TR><TD ALIGN="LEFT"><U>id</U></TD><TD ALIGN="LEFT">String(36) PK</TD></TR>
+                <TR><TD ALIGN="LEFT"><I>recording_id</I></TD><TD ALIGN="LEFT">String(36) FK</TD></TR>
+                <TR><TD ALIGN="LEFT">chunk_index</TD><TD ALIGN="LEFT">Integer</TD></TR>
+                <TR><TD ALIGN="LEFT">content</TD><TD ALIGN="LEFT">Text</TD></TR>
+                <TR><TD ALIGN="LEFT">speaker</TD><TD ALIGN="LEFT">String(50)</TD></TR>
+                <TR><TD ALIGN="LEFT">embedding</TD><TD ALIGN="LEFT">Vector(1024)</TD></TR>
+                <TR><TD ALIGN="LEFT">created_at</TD><TD ALIGN="LEFT">DateTime</TD></TR>
+            </TABLE>
+        >
+    ];
+
+    // SpeakerEmbedding table (many-to-1 with recordings)
+    speaker_embeddings [
+        shape=plaintext
+        label=<
+            <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" BGCOLOR="#F8CECC">
+                <TR><TD COLSPAN="2" BGCOLOR="#B85450"><B>speaker_embeddings</B></TD></TR>
+                <TR><TD ALIGN="LEFT"><U>id</U></TD><TD ALIGN="LEFT">String(36) PK</TD></TR>
+                <TR><TD ALIGN="LEFT"><I>recording_id</I></TD><TD ALIGN="LEFT">String(36) FK</TD></TR>
+                <TR><TD ALIGN="LEFT">speaker_label</TD><TD ALIGN="LEFT">String(50)</TD></TR>
+                <TR><TD ALIGN="LEFT">embedding_vector</TD><TD ALIGN="LEFT">Vector(512)</TD></TR>
+                <TR><TD ALIGN="LEFT">created_at</TD><TD ALIGN="LEFT">DateTime</TD></TR>
+            </TABLE>
+        >
+    ];
+
+    // Relationships
+    // 1-to-1: recordings to transcripts
+    recordings -> transcripts [
+        label="1:1"
+        headlabel=""
+        taillabel=""
+        arrowhead=none
+        arrowtail=none
+    ];
+
+    // 1-to-many: recordings to transcript_chunks
+    recordings -> transcript_chunks [
+        label="1:N"
+        headlabel=""
+        taillabel=""
+        arrowhead=crow
+        arrowtail=none
+    ];
+
+    // 1-to-many: recordings to speaker_embeddings
+    recordings -> speaker_embeddings [
+        label="1:N"
+        headlabel=""
+        taillabel=""
+        arrowhead=crow
+        arrowtail=none
+    ];
+}

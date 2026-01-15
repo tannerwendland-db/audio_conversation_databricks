@@ -2,6 +2,10 @@
 
 A Databricks-hosted web application that enables teams to upload audio recordings of customer conversations, process them through speaker diarization and transcription, and interact with the content through a conversational AI interface.
 
+## Architecture
+
+![Audio Conversation Architecture](docs/diagrams/audio_rag_architecture.png)
+
 ## Features
 
 - **Audio Upload**: Drag-and-drop support for MP3, WAV, M4A, and FLAC files (up to 500MB)
