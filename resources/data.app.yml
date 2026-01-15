@@ -1,0 +1,30 @@
+resources:
+  apps:
+    data_app:
+      name: "audio-diariozation-demo"
+      source_code_path: ..
+      description: "A demo of an app the does audio diarization"
+      resources:
+        - name: pg-user
+          secret:
+            scope: tanner
+            key: pg-user
+            permission: READ
+        - name: pg-password
+          secret:
+            scope: tanner
+            key: pg-password
+            permission: READ
+        - name: diarization-endpoint
+          serving_endpoint:
+            name: audio-transcription-diarization-endpoint
+            permission: CAN_QUERY
+        - name: llm-endpoint
+          serving_endpoint:
+            name: databricks-claude-sonnet-4-5
+            permission: CAN_QUERY
+        - name: embedding-endpoint
+          serving_endpoint:
+            name: databricks-gte-large-en
+            permission: CAN_QUERY
+

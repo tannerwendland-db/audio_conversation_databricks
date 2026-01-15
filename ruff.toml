@@ -1,0 +1,82 @@
+# Ruff configuration
+# Python 3.11+ project with Dash, SQLAlchemy, LangGraph, LangChain
+
+# Target Python version
+target-version = "py311"
+
+# Line length (100 is common for modern editors and high-res displays)
+line-length = 100
+
+# Indentation width
+indent-width = 4
+
+# Directories to exclude
+extend-exclude = [
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".git",
+    "alembic/versions",
+    "*.egg-info",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "dist",
+    "build",
+    "notebooks",  # Databricks notebooks with magic commands
+    "scripts",    # Utility scripts
+]
+
+[lint]
+# Enable rule sets
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+
+# Ignore specific rules if needed
+ignore = []
+
+# Allow fix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[lint.isort]
+# Configure isort behavior
+known-first-party = ["src"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+relative-imports-order = "closest-to-furthest"
+
+[lint.per-file-ignores]
+# Ignore specific rules for test files
+"tests/**/*.py" = [
+    "B008",   # Allow function calls in default arguments for fixtures
+    "SIM117", # Nested with statements are often clearer in tests
+    "E501",   # Test files often have long assertions and test data
+]
+
+# Ignore imports in __init__.py files
+"__init__.py" = ["F401", "E402"]
+
+# Alembic env.py needs to modify sys.path before imports
+"alembic/env.py" = ["E402"]
+
+[format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Indent with spaces
+indent-style = "space"
+
+# Respect magic trailing commas
+skip-magic-trailing-comma = false
+
+# Auto-detect line endings
+line-ending = "auto"

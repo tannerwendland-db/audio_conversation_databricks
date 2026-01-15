@@ -1,0 +1,105 @@
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "audio-conversation-rag"
+version = "0.1.0"
+description = "Audio Conversation RAG System - A Databricks App for processing audio recordings with speaker diarization and conversational RAG interface"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Databricks"}
+authors = [
+    {name = "Tanner Wendland", email = "tanner.wendland@databricks.com"}
+]
+keywords = ["audio", "rag", "databricks", "langchain", "diarization", "transcription"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # Core Web Framework
+    "dash>=3.3.0",
+    "dash-bootstrap-components>=2.0.0",
+    "plotly>=6.5.0",
+
+    # Database
+    "sqlalchemy>=2.0.0",
+    "psycopg[binary]>=3.0.0",
+    "alembic>=1.13.0",
+    "pgvector>=0.2.0",
+
+    # AI/ML
+    "langchain>=0.3.0",
+    "langchain-postgres>=0.0.16",
+    "langgraph>=0.2.0",
+    "databricks-langchain>=0.1.0",
+    "databricks-sdk>=0.30.0",
+
+    # Audio Processing
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
+
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/tannerwendland-db/audio_conversation_databricks"
+Repository = "https://github.com/tannerwendland-db/audio_conversation_databricks"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = [
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--strict-markers",
+    "--verbose",
+]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.ruff]
+extend = "ruff.toml"

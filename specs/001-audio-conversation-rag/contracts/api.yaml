@@ -1,0 +1,556 @@
+# Internal Service Contracts for Audio Conversation RAG System
+# These define the interfaces between internal services (not external HTTP APIs)
+# The application is a Dash app with callback-based interactions
+
+openapi: 3.0.3
+info:
+  title: Audio Conversation RAG - Internal Service Contracts
+  description: |
+    Internal service interfaces for the Databricks Dash application.
+    These are not HTTP endpoints but define the contract between Python modules.
+  version: 1.0.0
+
+# Note: This is a Dash application, not a REST API.
+# These "paths" represent internal service function contracts.
+
+paths:
+  # Audio Service Contracts
+  /internal/audio/upload:
+    post:
+      operationId: upload_audio
+      summary: Upload audio file to UC Volume
+      description: |
+        Accepts audio file bytes and uploads to Unity Catalog Volume.
+        Returns the volume path for the stored file.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AudioUploadRequest'
+      responses:
+        '200':
+          description: Upload successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudioUploadResponse'
+        '400':
+          description: Invalid file format or size exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /internal/audio/convert:
+    post:
+      operationId: convert_to_wav
+      summary: Convert audio to WAV format
+      description: |
+        Converts audio bytes from any supported format (MP3, M4A, FLAC) to WAV.
+        Required before sending to diarization endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AudioConvertRequest'
+      responses:
+        '200':
+          description: Conversion successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudioConvertResponse'
+
+  /internal/audio/diarize:
+    post:
+      operationId: diarize_audio
+      summary: Send audio to diarization endpoint
+      description: |
+        Sends WAV audio to audio-transcription-diarization-endpoint.
+        Returns transcription with speaker labels.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiarizeRequest'
+      responses:
+        '200':
+          description: Diarization successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiarizeResponse'
+        '500':
+          description: Diarization endpoint error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Embedding Service Contracts
+  /internal/embedding/chunk:
+    post:
+      operationId: chunk_transcript
+      summary: Split transcript into chunks
+      description: |
+        Splits diarized transcript into overlapping chunks for embedding.
+        Preserves speaker context in chunk metadata.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChunkRequest'
+      responses:
+        '200':
+          description: Chunking successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChunkResponse'
+
+  /internal/embedding/store:
+    post:
+      operationId: store_embeddings
+      summary: Generate and store embeddings
+      description: |
+        Generates embeddings for transcript chunks and stores in pgvector.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreEmbeddingsRequest'
+      responses:
+        '200':
+          description: Embeddings stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreEmbeddingsResponse'
+
+  # RAG Service Contracts
+  /internal/rag/query:
+    post:
+      operationId: rag_query
+      summary: Execute RAG query
+      description: |
+        Processes user query through LangGraph RAG agent.
+        Returns answer with source citations.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RAGQueryRequest'
+      responses:
+        '200':
+          description: Query successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RAGQueryResponse'
+
+  # Recording Management Contracts
+  /internal/recordings/list:
+    get:
+      operationId: list_recordings
+      summary: List all recordings
+      description: Returns all recordings for the team (team-wide access).
+      parameters:
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, title, duration]
+            default: created_at
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: List of recordings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordingListResponse'
+
+  /internal/recordings/{id}:
+    get:
+      operationId: get_recording
+      summary: Get recording details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Recording details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordingDetail'
+        '404':
+          description: Recording not found
+
+    patch:
+      operationId: update_recording
+      summary: Update recording (rename)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordingUpdateRequest'
+      responses:
+        '200':
+          description: Recording updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordingDetail'
+
+    delete:
+      operationId: delete_recording
+      summary: Delete recording and all associated data
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Recording deleted
+        '404':
+          description: Recording not found
+
+components:
+  schemas:
+    # Audio Service Schemas
+    AudioUploadRequest:
+      type: object
+      required:
+        - filename
+        - content_base64
+      properties:
+        filename:
+          type: string
+          description: Original filename with extension
+          example: "customer_call_2025-01-15.mp3"
+        content_base64:
+          type: string
+          format: byte
+          description: Base64-encoded audio file content
+        uploaded_by:
+          type: string
+          description: Databricks username
+
+    AudioUploadResponse:
+      type: object
+      required:
+        - recording_id
+        - volume_path
+      properties:
+        recording_id:
+          type: string
+          format: uuid
+        volume_path:
+          type: string
+          example: "/Volumes/main/default/audio-recordings/abc123.wav"
+
+    AudioConvertRequest:
+      type: object
+      required:
+        - audio_bytes
+        - source_format
+      properties:
+        audio_bytes:
+          type: string
+          format: byte
+        source_format:
+          type: string
+          enum: [mp3, m4a, flac, wav]
+
+    AudioConvertResponse:
+      type: object
+      required:
+        - wav_bytes
+        - duration_seconds
+      properties:
+        wav_bytes:
+          type: string
+          format: byte
+        duration_seconds:
+          type: number
+          format: float
+
+    DiarizeRequest:
+      type: object
+      required:
+        - wav_bytes
+      properties:
+        wav_bytes:
+          type: string
+          format: byte
+          description: WAV audio as bytes (will be base64 encoded for endpoint)
+
+    DiarizeResponse:
+      type: object
+      required:
+        - transcription
+        - status
+      properties:
+        transcription:
+          type: string
+          description: |
+            Diarized transcription with speaker labels.
+            Format: "Interviewer: text\nRespondent: text\n..."
+        status:
+          type: string
+          enum: [success, error]
+        error:
+          type: string
+          nullable: true
+
+    # Embedding Service Schemas
+    ChunkRequest:
+      type: object
+      required:
+        - recording_id
+        - recording_title
+        - diarized_text
+      properties:
+        recording_id:
+          type: string
+          format: uuid
+        recording_title:
+          type: string
+        diarized_text:
+          type: string
+        chunk_size:
+          type: integer
+          default: 500
+        chunk_overlap:
+          type: integer
+          default: 50
+
+    ChunkResponse:
+      type: object
+      required:
+        - chunks
+      properties:
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptChunk'
+
+    TranscriptChunk:
+      type: object
+      required:
+        - content
+        - metadata
+      properties:
+        content:
+          type: string
+        metadata:
+          type: object
+          properties:
+            recording_id:
+              type: string
+            recording_title:
+              type: string
+            chunk_index:
+              type: integer
+            speaker:
+              type: string
+              nullable: true
+            source_type:
+              type: string
+              default: transcript
+
+    StoreEmbeddingsRequest:
+      type: object
+      required:
+        - chunks
+      properties:
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptChunk'
+
+    StoreEmbeddingsResponse:
+      type: object
+      required:
+        - stored_count
+      properties:
+        stored_count:
+          type: integer
+
+    # RAG Service Schemas
+    RAGQueryRequest:
+      type: object
+      required:
+        - query
+        - session_id
+      properties:
+        query:
+          type: string
+          description: User's natural language question
+        session_id:
+          type: string
+          description: Session ID for conversation context
+        recording_filter:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional filter to specific recording
+
+    RAGQueryResponse:
+      type: object
+      required:
+        - answer
+        - citations
+      properties:
+        answer:
+          type: string
+          description: Generated answer from LLM
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+
+    Citation:
+      type: object
+      required:
+        - recording_id
+        - recording_title
+        - excerpt
+      properties:
+        recording_id:
+          type: string
+          format: uuid
+        recording_title:
+          type: string
+        excerpt:
+          type: string
+          description: Relevant text excerpt from recording
+        speaker:
+          type: string
+          nullable: true
+
+    # Recording Management Schemas
+    RecordingListResponse:
+      type: object
+      required:
+        - recordings
+        - total
+      properties:
+        recordings:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecordingSummary'
+        total:
+          type: integer
+
+    RecordingSummary:
+      type: object
+      required:
+        - id
+        - title
+        - processing_status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        original_filename:
+          type: string
+        processing_status:
+          type: string
+          enum: [pending, converting, diarizing, embedding, completed, failed]
+        duration_seconds:
+          type: number
+          format: float
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    RecordingDetail:
+      allOf:
+        - $ref: '#/components/schemas/RecordingSummary'
+        - type: object
+          properties:
+            volume_path:
+              type: string
+            uploaded_by:
+              type: string
+              nullable: true
+            transcript:
+              $ref: '#/components/schemas/TranscriptDetail'
+              nullable: true
+
+    TranscriptDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_text:
+          type: string
+        diarized_text:
+          type: string
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        language:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    RecordingUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          nullable: true
+          description: Additional error details

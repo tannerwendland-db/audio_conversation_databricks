@@ -1,0 +1,17 @@
+resources:
+  jobs:
+    audio_dizairization_job:
+      name: audio_dizairization_job
+      tasks:
+        - task_key: audio_dizairization_job
+          notebook_task:
+            notebook_path: ../notebooks/audio_diarization_pyfunc.py
+            base_parameters:
+              catalog: tanner_wendland_workspace
+              schema: default
+              volume: audio_recordings
+              embedding_model: databricks-gte-large-en
+              audio_path: lemonaid_stand_short.wav
+              unity_artifacts: True
+              secret_scope: tanner
+              secret_key: huggingface

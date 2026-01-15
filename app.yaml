@@ -1,0 +1,28 @@
+command:
+  - /bin/bash
+  - -c
+  - PYTHONPATH=/app/python/source_code python src/app.py
+
+env:
+  - name: POSTGRES_HOST
+    value: ep-fancy-voice-d2n1qrc3.database.us-east-1.cloud.databricks.com
+  - name: POSTGRES_PORT
+    value: '5432'
+  - name: POSTGRES_USER
+    valueFrom: pg-user
+  - name: POSTGRES_PASSWORD
+    valueFrom: pg-password
+  - name: POSTGRES_DB
+    value: databricks_postgres
+  - name: VOLUME_PATH
+    value: /Volumes/tanner_w_serverless_catalog/default/audio_recordings
+  - name: DIARIZATION_ENDPOINT
+    value: audio-transcription-diarization-endpoint
+  - name: SIMILARITY_TOP_K
+    value: '5'
+  - name: SIMILARITY_THRESHOLD
+    value: '0.7'
+  - name: ENABLE_AUDIO_CHUNKING
+    value: 'false'
+  - name: DIARIZATION_TIMEOUT_SECONDS
+    value: '900'
