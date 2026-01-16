@@ -5,9 +5,16 @@ including the main layout with navigation tabs and health check endpoint.
 """
 
 import json
+import logging
 import re
 
 import dash_bootstrap_components as dbc
+
+# Configure logging to show INFO level messages
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 from dash import Dash, Input, Output, callback, dcc, html
 from flask import Response
 
@@ -46,6 +53,7 @@ from src.components import (  # noqa: E402
 )
 from src.components import library as library_callbacks  # noqa: E402, F401
 from src.components import upload as upload_callbacks  # noqa: E402, F401
+from src.services.streaming import stream_chat_endpoint  # noqa: E402
 
 
 # Health check endpoint
@@ -60,6 +68,18 @@ def health_check() -> Response:
         json.dumps({"status": "healthy"}),
         mimetype="application/json",
     )
+
+
+# SSE streaming endpoint for chat
+@server.route("/api/chat/stream", methods=["POST"])
+def chat_stream() -> Response:
+    """Stream RAG response as Server-Sent Events.
+
+    Returns:
+        SSE stream with token, citations, done, or error events.
+    """
+    logging.info("Received request to /api/chat/stream endpoint")
+    return stream_chat_endpoint()
 
 
 # Navigation bar

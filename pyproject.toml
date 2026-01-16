@@ -25,6 +25,7 @@ dependencies = [
     # Core Web Framework
     "dash>=3.3.0",
     "dash-bootstrap-components>=2.0.0",
+    "dash-extensions>=1.0.18",
     "plotly>=6.5.0",
 
     # Database

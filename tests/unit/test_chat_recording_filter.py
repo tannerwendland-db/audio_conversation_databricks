@@ -417,72 +417,57 @@ class TestRetrieveNodeWithMultipleIds:
 class TestChatCallbackWithRecordingFilter:
     """Test cases for chat callback integration with recording filter."""
 
-    @patch("src.components.chat.rag_query")
-    @patch("src.components.chat.get_session")
-    def test_chat_callback_passes_selected_recordings_to_rag_query(
+    def test_chat_callback_passes_selected_recordings_in_sse_payload(
         self,
-        mock_get_session: MagicMock,
-        mock_rag_query: MagicMock,
     ):
-        """Chat callback should pass selected recording IDs to rag_query."""
+        """Chat callback should include selected recording IDs in SSE payload."""
         from src.components.chat import handle_chat_submit
-
-        mock_session = MagicMock()
-        mock_get_session.return_value = mock_session
-
-        mock_rag_query.return_value = {
-            "answer": "Filtered response",
-            "citations": [],
-        }
 
         selected_recordings = ["uuid-rec-001", "uuid-rec-002"]
 
         # Simulate chat submission with filter
-        # The callback now takes an additional parameter for recording filter
-        handle_chat_submit(
+        result = handle_chat_submit(
             n_clicks=1,
             user_input="What was discussed?",
             message_history=[],
             session_id="test-session",
             selected_recordings=selected_recordings,
+            stream_state=None,
         )
 
-        # Verify rag_query was called with recording_filter
-        mock_rag_query.assert_called_once()
-        call_kwargs = mock_rag_query.call_args.kwargs
-        assert call_kwargs.get("recording_filter") == selected_recordings
+        # Result tuple: (url, sse_options, history, rendered, input, stream_state)
+        sse_options = result[1]
 
-    @patch("src.components.chat.rag_query")
-    @patch("src.components.chat.get_session")
-    def test_chat_callback_with_no_filter_searches_all(
+        # Verify SSE payload contains recording_filter
+        assert sse_options is not None
+        assert "payload" in sse_options
+        payload = sse_options["payload"]
+        assert payload.get("recording_filter") == selected_recordings
+
+    def test_chat_callback_with_no_filter_omits_recording_filter_from_payload(
         self,
-        mock_get_session: MagicMock,
-        mock_rag_query: MagicMock,
     ):
-        """Chat callback with no filter should search all recordings."""
+        """Chat callback with no filter should not include recording_filter in SSE payload."""
         from src.components.chat import handle_chat_submit
 
-        mock_session = MagicMock()
-        mock_get_session.return_value = mock_session
-
-        mock_rag_query.return_value = {
-            "answer": "Unfiltered response",
-            "citations": [],
-        }
-
-        # Simulate chat submission without filter (None or empty)
-        handle_chat_submit(
+        # Simulate chat submission without filter (None)
+        result = handle_chat_submit(
             n_clicks=1,
             user_input="General question",
             message_history=[],
             session_id="test-session",
             selected_recordings=None,
+            stream_state=None,
         )
 
-        # Verify rag_query was called with None filter
-        mock_rag_query.assert_called_once()
-        call_kwargs = mock_rag_query.call_args.kwargs
-        assert call_kwargs.get("recording_filter") is None
+        # Result tuple: (url, sse_options, history, rendered, input, stream_state)
+        sse_options = result[1]
+
+        # Verify SSE payload does not contain recording_filter (searches all)
+        assert sse_options is not None
+        assert "payload" in sse_options
+        payload = sse_options["payload"]
+        assert "recording_filter" not in payload
 
 
 class TestRecordingFilterIntegration:

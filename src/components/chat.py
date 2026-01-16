@@ -1,8 +1,8 @@
 """Chat component for the Audio Conversation RAG System.
 
 This module provides a Dash component for the chat interface with message
-input, history display, RAG query handling, session management, and
-clickable citations linking to recording details.
+input, history display, RAG query handling, session management, streaming
+responses, and clickable citations linking to recording details.
 """
 
 import logging
@@ -10,13 +10,20 @@ import uuid
 
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, dcc, html
+from dash_extensions import SSE
+from dash_extensions.streaming import sse_options
 
 from src.db.session import get_session
 from src.models import ProcessingStatus
-from src.services.rag import rag_query
 from src.services.recording import list_recordings
 
 logger = logging.getLogger(__name__)
+
+# Stream state constants
+STREAM_STATE_IDLE = "idle"
+STREAM_STATE_STREAMING = "streaming"
+STREAM_STATE_COMPLETE = "complete"
+STREAM_STATE_ERROR = "error"
 
 
 def _format_duration(seconds: float | None) -> str:
@@ -35,7 +42,7 @@ def create_chat_component() -> dbc.Container:
 
     Returns:
         A Dash Bootstrap Container with the chat interface including
-        message history, input area, and session storage.
+        message history, input area, streaming support, and session storage.
     """
     return dbc.Container(
         [
@@ -56,6 +63,24 @@ def create_chat_component() -> dbc.Container:
                 storage_type="session",
                 data=[],
             ),
+            # Store for streaming state
+            dcc.Store(
+                id="chat-stream-state",
+                storage_type="memory",
+                data={
+                    "status": STREAM_STATE_IDLE,
+                    "partial_content": "",
+                    "citations": None,
+                    "error_message": None,
+                },
+            ),
+            # SSE component for streaming responses
+            SSE(
+                id="chat-sse",
+                concat=False,  # We handle accumulation manually
+            ),
+            # Hidden div for SSE content accumulation (used by clientside callback)
+            html.Div(id="chat-sse-content", style={"display": "none"}),
             # Recording filter and clear button row
             dbc.Row(
                 [
@@ -102,6 +127,11 @@ def create_chat_component() -> dbc.Container:
                 ),
                 className="mb-3",
             ),
+            # Streaming message area (shown during streaming)
+            html.Div(
+                id="chat-streaming-message",
+                style={"display": "none"},
+            ),
             # Input area
             dbc.Row(
                 [
@@ -130,7 +160,7 @@ def create_chat_component() -> dbc.Container:
                 ],
                 className="g-2",
             ),
-            # Loading indicator
+            # Loading indicator (kept for non-streaming operations)
             dcc.Loading(
                 id="chat-loading",
                 type="circle",
@@ -343,6 +373,38 @@ def _create_no_results_message() -> dbc.Card:
     )
 
 
+def _create_streaming_message(content: str, is_streaming: bool = True) -> dbc.Card:
+    """Create a streaming message bubble with optional pulsing cursor.
+
+    Args:
+        content: The partially streamed content.
+        is_streaming: Whether streaming is still active (shows cursor).
+
+    Returns:
+        A Card component styled as a streaming assistant message.
+    """
+    cursor_class = "streaming-cursor" if is_streaming else ""
+
+    return dbc.Card(
+        dbc.CardBody(
+            [
+                html.Small("Assistant", className="text-muted fw-bold"),
+                html.Span(
+                    content,
+                    className=f"mb-0 mt-1 streaming-content {cursor_class}",
+                    style={"whiteSpace": "pre-wrap", "display": "block"},
+                ),
+            ],
+            className="py-2 px-3",
+        ),
+        className="mb-2 me-5",
+        style={
+            "backgroundColor": "#f5f5f5",
+            "borderRadius": "15px 15px 15px 0",
+        },
+    )
+
+
 def _truncate_text(text: str, max_length: int) -> str:
     """Truncate text to a maximum length with ellipsis.
 
@@ -452,15 +514,18 @@ def populate_recording_filter_options(session_id: str | None) -> list[dict]:
 
 
 @callback(
-    Output("chat-message-display", "children"),
+    Output("chat-sse", "url"),
+    Output("chat-sse", "options"),
     Output("chat-message-history", "data"),
+    Output("chat-message-display", "children"),
     Output("chat-input", "value"),
-    Output("chat-loading-output", "children"),
+    Output("chat-stream-state", "data"),
     Input("chat-send-button", "n_clicks"),
     State("chat-input", "value"),
     State("chat-message-history", "data"),
     State("chat-session-id", "data"),
     State("chat-recording-filter", "value"),
+    State("chat-stream-state", "data"),
     prevent_initial_call=True,
 )
 def handle_chat_submit(
@@ -469,11 +534,12 @@ def handle_chat_submit(
     message_history: list[dict],
     session_id: str | None,
     selected_recordings: list[str] | None,
-) -> tuple[list, list[dict], str, None]:
-    """Handle chat message submission and RAG query.
+    stream_state: dict | None,
+) -> tuple[str | None, dict | None, list[dict], list, str, dict]:
+    """Handle chat message submission and initiate streaming RAG query.
 
-    Processes the user's query through the RAG service and displays
-    the response with citations.
+    Adds the user message to history and triggers the SSE stream for
+    the assistant response.
 
     Args:
         n_clicks: Number of times the send button was clicked.
@@ -481,18 +547,20 @@ def handle_chat_submit(
         message_history: Current message history.
         session_id: Unique session identifier.
         selected_recordings: List of recording IDs to filter by, or None for all.
+        stream_state: Current streaming state.
 
     Returns:
-        Tuple of (rendered_messages, updated_history, cleared_input, loading_state).
+        Tuple of (sse_url, sse_options, updated_history, rendered_messages,
+        cleared_input, new_stream_state).
     """
+    from dash.exceptions import PreventUpdate
+
+    # Check if already streaming
+    if stream_state and stream_state.get("status") == STREAM_STATE_STREAMING:
+        raise PreventUpdate
+
     if not n_clicks or not user_input or not user_input.strip():
-        # No action needed
-        return (
-            _render_message_history(message_history),
-            message_history,
-            user_input or "",
-            None,
-        )
+        raise PreventUpdate
 
     query = user_input.strip()
     session_id = session_id or str(uuid.uuid4())
@@ -511,61 +579,38 @@ def handle_chat_submit(
         }
     )
 
-    try:
-        session = get_session()
-        try:
-            # Invoke RAG query
-            logger.info(f"Processing chat query for session {session_id}: {query[:50]}...")
-            result = rag_query(
-                session=session,
-                query=query,
-                session_id=session_id,
-                recording_filter=selected_recordings if selected_recordings else None,
-            )
+    logger.info(f"Starting streaming chat query for session {session_id}: {query[:50]}...")
 
-            answer = result.get("answer", "")
-            citations = result.get("citations", [])
+    # Build SSE options - payload must be JSON string for sse_options
+    import json as json_module
 
-            # Check for no results
-            is_no_results = not citations and "no relevant" in answer.lower()
+    payload_dict = {
+        "query": query,
+        "session_id": session_id,
+    }
+    if selected_recordings:
+        payload_dict["recording_filter"] = selected_recordings
+    payload = json_module.dumps(payload_dict)
 
-            # Add assistant response to history
-            updated_history.append(
-                {
-                    "role": "assistant",
-                    "content": answer,
-                    "citations": citations,
-                    "is_no_results": is_no_results,
-                }
-            )
+    # Set stream state to streaming
+    new_stream_state = {
+        "status": STREAM_STATE_STREAMING,
+        "partial_content": "",
+        "citations": None,
+        "error_message": None,
+    }
 
-            logger.info(
-                f"Chat query completed for session {session_id} with {len(citations)} citations"
-            )
+    # Render history with streaming message placeholder
+    rendered = _render_message_history(updated_history)
+    rendered.append(_create_streaming_message("", is_streaming=True))
 
-        finally:
-            session.close()
-
-    except Exception as e:
-        error_msg = f"Failed to process your question: {e!s}"
-        logger.error(f"Chat query failed for session {session_id}: {e}", exc_info=True)
-
-        # Add error message to history
-        updated_history.append(
-            {
-                "role": "assistant",
-                "content": error_msg,
-                "citations": [],
-                "is_error": True,
-            }
-        )
-
-    # Render and return
     return (
-        _render_message_history(updated_history),
+        "/api/chat/stream",
+        sse_options(payload=payload, headers={"Content-Type": "application/json"}),
         updated_history,
+        rendered,
         "",  # Clear input
-        None,
+        new_stream_state,
     )
 
 
@@ -592,16 +637,27 @@ def sync_message_display(message_history: list[dict]) -> list:
 @callback(
     Output("chat-send-button", "disabled"),
     Input("chat-input", "value"),
+    Input("chat-stream-state", "data"),
 )
-def toggle_send_button(input_value: str | None) -> bool:
-    """Enable/disable send button based on input content.
+def toggle_send_button(input_value: str | None, stream_state: dict | None) -> bool:
+    """Enable/disable send button based on input content and streaming state.
+
+    Disables the button when:
+    - Input is empty or whitespace only
+    - Streaming is in progress (FR-008)
 
     Args:
         input_value: Current value of the input field.
+        stream_state: Current streaming state.
 
     Returns:
         True to disable the button, False to enable.
     """
+    # Disable during streaming
+    if stream_state and stream_state.get("status") == STREAM_STATE_STREAMING:
+        return True
+
+    # Disable if input is empty
     return not (input_value and input_value.strip())
 
 
@@ -609,17 +665,18 @@ def toggle_send_button(input_value: str | None) -> bool:
     Output("chat-message-history", "data", allow_duplicate=True),
     Output("chat-message-display", "children", allow_duplicate=True),
     Output("chat-input", "value", allow_duplicate=True),
+    Output("chat-stream-state", "data", allow_duplicate=True),
     Input("chat-clear-button", "n_clicks"),
     prevent_initial_call=True,
 )
-def clear_conversation(n_clicks: int | None) -> tuple[list, list, str]:
+def clear_conversation(n_clicks: int | None) -> tuple[list, list, str, dict]:
     """Clear the conversation history and reset the chat display.
 
     Args:
         n_clicks: Number of times the clear button was clicked.
 
     Returns:
-        Tuple of (empty_history, welcome_message, empty_input).
+        Tuple of (empty_history, welcome_message, empty_input, reset_stream_state).
     """
     if not n_clicks:
         # No action needed
@@ -628,4 +685,262 @@ def clear_conversation(n_clicks: int | None) -> tuple[list, list, str]:
         raise PreventUpdate
 
     logger.info("Clearing conversation history")
-    return [], [_create_welcome_message()], ""
+    return (
+        [],
+        [_create_welcome_message()],
+        "",
+        {
+            "status": STREAM_STATE_IDLE,
+            "partial_content": "",
+            "citations": None,
+            "error_message": None,
+        },
+    )
+
+
+@callback(
+    Output("chat-stream-state", "data", allow_duplicate=True),
+    Output("chat-message-display", "children", allow_duplicate=True),
+    Output("chat-message-history", "data", allow_duplicate=True),
+    Input("chat-sse", "value"),
+    State("chat-stream-state", "data"),
+    State("chat-message-history", "data"),
+    prevent_initial_call=True,
+)
+def handle_sse_event(
+    sse_value: str | None,
+    stream_state: dict | None,
+    message_history: list[dict],
+) -> tuple[dict, list, list[dict]]:
+    """Handle incoming SSE events and update streaming state.
+
+    Processes token, citations, done, and error events from the SSE stream.
+
+    Args:
+        sse_value: Raw SSE event data.
+        stream_state: Current streaming state.
+        message_history: Current message history.
+
+    Returns:
+        Tuple of (updated_stream_state, rendered_messages, updated_history).
+    """
+    import json
+
+    from dash.exceptions import PreventUpdate
+
+    logger.info(f"handle_sse_event called with sse_value: {str(sse_value)[:100]}")
+    logger.info(f"handle_sse_event stream_state: {stream_state}")
+
+    if not sse_value or not stream_state:
+        raise PreventUpdate
+
+    # Initialize state if needed
+    if stream_state is None:
+        stream_state = {
+            "status": STREAM_STATE_IDLE,
+            "partial_content": "",
+            "citations": None,
+            "error_message": None,
+        }
+
+    if message_history is None:
+        message_history = []
+
+    # Parse SSE event - the value comes as JSON
+    try:
+        event_data = json.loads(sse_value) if isinstance(sse_value, str) else sse_value
+    except (json.JSONDecodeError, TypeError):
+        # Try to handle as raw string
+        event_data = {"content": sse_value}
+
+    logger.info(f"Parsed event_data: {event_data}")
+
+    # Determine event type from 'type' field or content
+    event_type = event_data.get("type", "")
+
+    if event_type == "token" and "content" in event_data:
+        # Token event
+        new_content = stream_state.get("partial_content", "") + event_data["content"]
+        new_state = {
+            **stream_state,
+            "status": STREAM_STATE_STREAMING,
+            "partial_content": new_content,
+        }
+
+        # Render with streaming message
+        rendered = _render_message_history(message_history)
+        rendered.append(_create_streaming_message(new_content, is_streaming=True))
+
+        return new_state, rendered, message_history
+
+    elif event_type == "citations":
+        # Citations event
+        new_state = {
+            **stream_state,
+            "citations": event_data.get("citations", []),
+        }
+        # Keep streaming message visible with updated citations stored
+        rendered = _render_message_history(message_history)
+        partial = stream_state.get("partial_content", "")
+        if partial:
+            rendered.append(_create_streaming_message(partial, is_streaming=True))
+        return new_state, rendered, message_history
+
+    elif event_type == "error":
+        # Error event - preserve partial content and add error
+        error_msg = event_data.get("message", "An error occurred")
+        partial_content = stream_state.get("partial_content", "")
+
+        # Set state to error
+        new_state = {
+            **stream_state,
+            "status": STREAM_STATE_ERROR,
+            "error_message": error_msg,
+        }
+
+        # Add error to history, preserving partial content if any
+        updated_history = message_history.copy()
+        if partial_content:
+            # Add partial content as a message with error flag
+            updated_history.append(
+                {
+                    "role": "assistant",
+                    "content": partial_content + f"\n\n[Error: {error_msg}]",
+                    "citations": [],
+                    "is_error": True,
+                }
+            )
+        else:
+            # Just add error message
+            updated_history.append(
+                {
+                    "role": "assistant",
+                    "content": f"Error: {error_msg}",
+                    "citations": [],
+                    "is_error": True,
+                }
+            )
+
+        logger.error(f"Streaming error: {error_msg}")
+
+        # Reset to idle after error acknowledgment
+        final_state = {
+            "status": STREAM_STATE_IDLE,
+            "partial_content": "",
+            "citations": None,
+            "error_message": None,
+        }
+
+        return final_state, _render_message_history(updated_history), updated_history
+
+    elif event_type == "done":
+        # Done event - finalize the streaming message
+        partial_content = stream_state.get("partial_content", "")
+        citations = stream_state.get("citations") or []
+
+        if not partial_content:
+            raise PreventUpdate
+
+        # Add assistant message to history
+        updated_history = message_history.copy()
+        is_no_results = not citations and "no relevant" in partial_content.lower()
+
+        updated_history.append(
+            {
+                "role": "assistant",
+                "content": partial_content,
+                "citations": citations,
+                "is_no_results": is_no_results,
+            }
+        )
+
+        logger.info(f"Stream done event: completed with {len(citations)} citations")
+
+        # Reset stream state
+        new_state = {
+            "status": STREAM_STATE_IDLE,
+            "partial_content": "",
+            "citations": None,
+            "error_message": None,
+        }
+
+        return new_state, _render_message_history(updated_history), updated_history
+
+    else:
+        # Unknown event - ignore
+        logger.warning(f"Unknown SSE event type: {event_type}")
+        raise PreventUpdate
+
+
+@callback(
+    Output("chat-stream-state", "data", allow_duplicate=True),
+    Output("chat-message-display", "children", allow_duplicate=True),
+    Output("chat-message-history", "data", allow_duplicate=True),
+    Input("chat-sse", "state"),
+    State("chat-stream-state", "data"),
+    State("chat-message-history", "data"),
+    prevent_initial_call=True,
+)
+def handle_sse_completion(
+    sse_state: str | None,
+    stream_state: dict | None,
+    message_history: list[dict],
+) -> tuple[dict, list, list[dict]]:
+    """Handle SSE stream completion (done event).
+
+    Finalizes the streaming message, adds it to history, and resets stream state.
+
+    Args:
+        sse_state: SSE connection state.
+        stream_state: Current streaming state.
+        message_history: Current message history.
+
+    Returns:
+        Tuple of (reset_stream_state, rendered_messages, updated_history).
+    """
+    from dash.exceptions import PreventUpdate
+
+    logger.info(f"handle_sse_completion called with sse_state: {sse_state}")
+    logger.info(f"handle_sse_completion stream_state: {stream_state}")
+
+    # Only act when stream closes (state becomes "closed" or None after streaming)
+    if sse_state not in ["closed", None]:
+        raise PreventUpdate
+
+    if not stream_state or stream_state.get("status") != STREAM_STATE_STREAMING:
+        raise PreventUpdate
+
+    partial_content = stream_state.get("partial_content", "")
+    citations = stream_state.get("citations") or []
+
+    # Skip if no content was streamed
+    if not partial_content:
+        raise PreventUpdate
+
+    if message_history is None:
+        message_history = []
+
+    # Add assistant message to history
+    updated_history = message_history.copy()
+    is_no_results = not citations and "no relevant" in partial_content.lower()
+
+    updated_history.append(
+        {
+            "role": "assistant",
+            "content": partial_content,
+            "citations": citations,
+            "is_no_results": is_no_results,
+        }
+    )
+
+    logger.info(f"Stream completed with {len(citations)} citations")
+
+    # Reset stream state
+    new_state = {
+        "status": STREAM_STATE_IDLE,
+        "partial_content": "",
+        "citations": None,
+        "error_message": None,
+    }
+
+    return new_state, _render_message_history(updated_history), updated_history
