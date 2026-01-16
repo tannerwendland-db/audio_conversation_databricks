@@ -1,7 +1,7 @@
 resources:
   apps:
     data_app:
-      name: "Audio Transcriber + Chat"
+      name: "audio-transcriber"
       source_code_path: ..
       description: "A demo of an app the does audio diarization"
       resources:
