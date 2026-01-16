@@ -9,6 +9,8 @@ Auto-generated from all feature plans. Last updated: 2025-12-12
 - Python 3.11+ + Dash 3.3+, dash-bootstrap-components 2.0+, SQLAlchemy 2.0+, LangChain 0.3+ (003-multi-speaker-conversation)
 - PostgreSQL (Databricks Lakebase) with pgvector; existing `dialog_json` field stores speaker turns (003-multi-speaker-conversation)
 - Python 3.11+ + pyannote.audio 4.0.3, torch, MLflow (model); SQLAlchemy 2.0+, psycopg2 (app) (004-speaker-embedding-matching)
+- Python 3.11+ + Dash 3.3+, dash-extensions 1.0.18+, databricks-langchain 0.1+, LangGraph 0.2+ (005-chat-streaming-responses)
+- PostgreSQL (Databricks Lakebase) with pgvector - unchanged (005-chat-streaming-responses)
 
 - Python 3.11+ + Dash, SQLAlchemy, LangGraph, LangChain, psycopg2, databricks-sdk (001-audio-conversation-rag)
 
@@ -28,9 +30,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+: Follow standard conventions
 
 ## Recent Changes
+- 005-chat-streaming-responses: Added Python 3.11+ + Dash 3.3+, dash-extensions 1.0.18+, databricks-langchain 0.1+, LangGraph 0.2+
 - 004-speaker-embedding-matching: Added Python 3.11+ + pyannote.audio 4.0.3, torch, MLflow (model); SQLAlchemy 2.0+, psycopg2 (app)
 - 003-multi-speaker-conversation: Added Python 3.11+ + Dash 3.3+, dash-bootstrap-components 2.0+, SQLAlchemy 2.0+, LangChain 0.3+
-- 002-diarized-transcript-viewer: Added Python 3.11+ + Dash, SQLAlchemy, LangChain, LangGraph, databricks-langchain, psycopg2
 
 
 <!-- MANUAL ADDITIONS START -->
