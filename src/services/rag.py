@@ -50,6 +50,7 @@ def _get_llm() -> ChatDatabricks:
         ChatDatabricks instance configured with the LLM endpoint.
     """
     settings = get_settings()
+    logger.info(f"Initializing ChatDatabricks with endpoint: {settings.LLM_ENDPOINT}")
     return ChatDatabricks(endpoint=settings.LLM_ENDPOINT)
 
 

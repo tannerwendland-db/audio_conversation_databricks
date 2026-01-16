@@ -1,0 +1,236 @@
+# SSE Streaming Endpoint Contract
+# Feature: 005-chat-streaming-responses
+# Date: 2026-01-16
+
+openapi: 3.0.3
+info:
+  title: Chat Streaming API
+  description: Server-Sent Events endpoint for streaming RAG responses
+  version: 1.0.0
+
+paths:
+  /api/chat/stream:
+    post:
+      summary: Stream RAG response
+      description: |
+        Initiates a streaming RAG query. Returns a Server-Sent Events stream
+        with token-by-token response delivery.
+      operationId: streamChatResponse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StreamRequest'
+      responses:
+        '200':
+          description: SSE stream of response tokens
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/SSEStream'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    StreamRequest:
+      type: object
+      required:
+        - query
+        - session_id
+      properties:
+        query:
+          type: string
+          description: User's question to the RAG system
+          minLength: 1
+          maxLength: 4096
+          example: "What was discussed about quarterly targets?"
+        session_id:
+          type: string
+          format: uuid
+          description: Unique session identifier for conversation context
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        recording_filter:
+          type: array
+          items:
+            type: string
+          description: Optional list of recording IDs to filter retrieval
+          example: ["rec_123", "rec_456"]
+
+    SSEStream:
+      description: |
+        Server-Sent Events stream. Each event follows SSE format:
+        ```
+        event: <type>
+        data: <json_payload>
+
+        ```
+      oneOf:
+        - $ref: '#/components/schemas/TokenEvent'
+        - $ref: '#/components/schemas/CitationsEvent'
+        - $ref: '#/components/schemas/DoneEvent'
+        - $ref: '#/components/schemas/ErrorEvent'
+
+    TokenEvent:
+      type: object
+      description: Single token from LLM generation
+      properties:
+        event:
+          type: string
+          const: token
+        data:
+          type: object
+          properties:
+            content:
+              type: string
+              description: Token content (may be partial word)
+              example: "The"
+          required:
+            - content
+      example:
+        event: token
+        data:
+          content: "quarterly"
+
+    CitationsEvent:
+      type: object
+      description: Source citations after response completes
+      properties:
+        event:
+          type: string
+          const: citations
+        data:
+          type: object
+          properties:
+            citations:
+              type: array
+              items:
+                $ref: '#/components/schemas/Citation'
+          required:
+            - citations
+      example:
+        event: citations
+        data:
+          citations:
+            - recording_id: "rec_123"
+              recording_title: "Q4 Planning Meeting"
+              excerpt: "We discussed quarterly targets..."
+              speaker: "John Smith"
+
+    DoneEvent:
+      type: object
+      description: Stream completion signal
+      properties:
+        event:
+          type: string
+          const: done
+        data:
+          type: object
+          properties: {}
+      example:
+        event: done
+        data: {}
+
+    ErrorEvent:
+      type: object
+      description: Error during streaming
+      properties:
+        event:
+          type: string
+          const: error
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Human-readable error message
+            code:
+              type: string
+              description: Error code for programmatic handling
+              enum:
+                - RETRIEVAL_FAILED
+                - GENERATION_FAILED
+                - TIMEOUT
+                - INTERNAL_ERROR
+          required:
+            - message
+      example:
+        event: error
+        data:
+          message: "Failed to generate response"
+          code: "GENERATION_FAILED"
+
+    Citation:
+      type: object
+      description: Source citation for RAG response
+      properties:
+        recording_id:
+          type: string
+          description: ID of the source recording
+        recording_title:
+          type: string
+          description: Human-readable title
+        excerpt:
+          type: string
+          description: Relevant text excerpt from transcript
+        speaker:
+          type: string
+          nullable: true
+          description: Speaker name if available
+      required:
+        - recording_id
+        - recording_title
+        - excerpt
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+      required:
+        - error
+
+# SSE Wire Format Examples
+# ========================
+#
+# Successful stream:
+# -----------------
+# event: token
+# data: {"content": "Based"}
+#
+# event: token
+# data: {"content": " on"}
+#
+# event: token
+# data: {"content": " the"}
+#
+# ... more tokens ...
+#
+# event: citations
+# data: {"citations": [{"recording_id": "rec_123", ...}]}
+#
+# event: done
+# data: {}
+#
+# Error during stream:
+# -------------------
+# event: token
+# data: {"content": "Based on"}
+#
+# event: error
+# data: {"message": "Connection to LLM lost", "code": "GENERATION_FAILED"}

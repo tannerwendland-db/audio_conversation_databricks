@@ -1,22 +1,29 @@
 """Chat component for the Audio Conversation RAG System.
 
 This module provides a Dash component for the chat interface with message
-input, history display, RAG query handling, session management, and
-clickable citations linking to recording details.
+input, history display, RAG query handling, session management, streaming
+responses, and clickable citations linking to recording details.
 """
 
 import logging
 import uuid
 
 import dash_bootstrap_components as dbc
-from dash import Input, Output, State, callback, dcc, html
+from dash import Input, Output, State, callback, clientside_callback, dcc, html
+from dash_extensions import SSE
+from dash_extensions.streaming import sse_options
 
 from src.db.session import get_session
 from src.models import ProcessingStatus
-from src.services.rag import rag_query
 from src.services.recording import list_recordings
 
 logger = logging.getLogger(__name__)
+
+# Stream state constants
+STREAM_STATE_IDLE = "idle"
+STREAM_STATE_STREAMING = "streaming"
+STREAM_STATE_COMPLETE = "complete"
+STREAM_STATE_ERROR = "error"
 
 
 def _format_duration(seconds: float | None) -> str:
@@ -35,7 +42,7 @@ def create_chat_component() -> dbc.Container:
 
     Returns:
         A Dash Bootstrap Container with the chat interface including
-        message history, input area, and session storage.
+        message history, input area, streaming support, and session storage.
     """
     return dbc.Container(
         [
@@ -55,6 +62,37 @@ def create_chat_component() -> dbc.Container:
                 id="chat-message-history",
                 storage_type="session",
                 data=[],
+            ),
+            # Store for streaming state
+            dcc.Store(
+                id="chat-stream-state",
+                storage_type="memory",
+                data={
+                    "status": STREAM_STATE_IDLE,
+                    "partial_content": "",
+                    "citations": None,
+                    "error_message": None,
+                },
+            ),
+            # SSE component for streaming responses
+            # concat=True ensures no messages are dropped - we parse the concatenated value
+            SSE(
+                id="chat-sse",
+                concat=True,
+            ),
+            # Store for accumulated streaming content
+            # ONLY the clientside callback outputs to this - Python callbacks read via State only
+            dcc.Store(
+                id="streaming-accumulated-text",
+                storage_type="memory",
+                data="",
+            ),
+            # Reset trigger - Python callbacks write to this to signal the clientside
+            # callback to reset the accumulator
+            dcc.Store(
+                id="streaming-reset-trigger",
+                storage_type="memory",
+                data=0,
             ),
             # Recording filter and clear button row
             dbc.Row(
@@ -85,19 +123,31 @@ def create_chat_component() -> dbc.Container:
                 ],
                 className="mb-3 g-2",
             ),
-            # Message history display area
+            # Message history display area with separate streaming container
             dbc.Card(
                 dbc.CardBody(
                     html.Div(
-                        id="chat-message-display",
+                        [
+                            # Historical messages (only re-rendered when history changes)
+                            html.Div(
+                                id="chat-message-display",
+                                children=[
+                                    _create_welcome_message(),
+                                ],
+                            ),
+                            # Streaming message container (updated independently during streaming)
+                            html.Div(
+                                id="chat-streaming-container",
+                                style={"display": "none"},
+                            ),
+                        ],
+                        id="chat-scroll-container",
+                        **{"data-scroll": ""},  # Dummy attribute for clientside callback output
                         style={
                             "height": "400px",
                             "overflowY": "auto",
                             "padding": "10px",
                         },
-                        children=[
-                            _create_welcome_message(),
-                        ],
                     ),
                 ),
                 className="mb-3",
@@ -130,7 +180,7 @@ def create_chat_component() -> dbc.Container:
                 ],
                 className="g-2",
             ),
-            # Loading indicator
+            # Loading indicator (kept for non-streaming operations)
             dcc.Loading(
                 id="chat-loading",
                 type="circle",
@@ -343,6 +393,39 @@ def _create_no_results_message() -> dbc.Card:
     )
 
 
+def _create_streaming_message(content: str, is_streaming: bool = True) -> dbc.Card:
+    """Create a streaming message bubble with optional pulsing cursor.
+
+    Args:
+        content: The partially streamed content.
+        is_streaming: Whether streaming is still active (shows cursor).
+
+    Returns:
+        A Card component styled as a streaming assistant message.
+    """
+    cursor_class = "streaming-cursor" if is_streaming else ""
+
+    return dbc.Card(
+        dbc.CardBody(
+            [
+                html.Small("Assistant", className="text-muted fw-bold"),
+                html.Span(
+                    content,
+                    id="streaming-text-content",  # Target for DOM manipulation
+                    className=f"mb-0 mt-1 streaming-content {cursor_class}",
+                    style={"whiteSpace": "pre-wrap", "display": "block"},
+                ),
+            ],
+            className="py-2 px-3",
+        ),
+        className="mb-2 me-5",
+        style={
+            "backgroundColor": "#f5f5f5",
+            "borderRadius": "15px 15px 15px 0",
+        },
+    )
+
+
 def _truncate_text(text: str, max_length: int) -> str:
     """Truncate text to a maximum length with ellipsis.
 
@@ -452,15 +535,22 @@ def populate_recording_filter_options(session_id: str | None) -> list[dict]:
 
 
 @callback(
-    Output("chat-message-display", "children"),
-    Output("chat-message-history", "data"),
+    Output("chat-sse", "url"),
+    Output("chat-sse", "options"),
+    Output("chat-message-history", "data", allow_duplicate=True),
+    Output("chat-message-display", "children", allow_duplicate=True),
     Output("chat-input", "value"),
-    Output("chat-loading-output", "children"),
+    Output("chat-stream-state", "data", allow_duplicate=True),
+    Output("chat-streaming-container", "children", allow_duplicate=True),
+    Output("chat-streaming-container", "style", allow_duplicate=True),
+    Output("streaming-reset-trigger", "data", allow_duplicate=True),
     Input("chat-send-button", "n_clicks"),
     State("chat-input", "value"),
     State("chat-message-history", "data"),
     State("chat-session-id", "data"),
     State("chat-recording-filter", "value"),
+    State("chat-stream-state", "data"),
+    State("streaming-reset-trigger", "data"),
     prevent_initial_call=True,
 )
 def handle_chat_submit(
@@ -469,11 +559,13 @@ def handle_chat_submit(
     message_history: list[dict],
     session_id: str | None,
     selected_recordings: list[str] | None,
-) -> tuple[list, list[dict], str, None]:
-    """Handle chat message submission and RAG query.
+    stream_state: dict | None,
+    reset_trigger: int | None,
+) -> tuple[str | None, dict | None, list[dict], list, str, dict, dbc.Card, dict, int]:
+    """Handle chat message submission and initiate streaming RAG query.
 
-    Processes the user's query through the RAG service and displays
-    the response with citations.
+    Adds the user message to history and triggers the SSE stream for
+    the assistant response.
 
     Args:
         n_clicks: Number of times the send button was clicked.
@@ -481,18 +573,21 @@ def handle_chat_submit(
         message_history: Current message history.
         session_id: Unique session identifier.
         selected_recordings: List of recording IDs to filter by, or None for all.
+        stream_state: Current streaming state.
 
     Returns:
-        Tuple of (rendered_messages, updated_history, cleared_input, loading_state).
+        Tuple of (sse_url, sse_options, updated_history, rendered_messages,
+        cleared_input, new_stream_state, streaming_msg, streaming_style,
+        reset_accumulated).
     """
+    from dash.exceptions import PreventUpdate
+
+    # Check if already streaming
+    if stream_state and stream_state.get("status") == STREAM_STATE_STREAMING:
+        raise PreventUpdate
+
     if not n_clicks or not user_input or not user_input.strip():
-        # No action needed
-        return (
-            _render_message_history(message_history),
-            message_history,
-            user_input or "",
-            None,
-        )
+        raise PreventUpdate
 
     query = user_input.strip()
     session_id = session_id or str(uuid.uuid4())
@@ -511,61 +606,43 @@ def handle_chat_submit(
         }
     )
 
-    try:
-        session = get_session()
-        try:
-            # Invoke RAG query
-            logger.info(f"Processing chat query for session {session_id}: {query[:50]}...")
-            result = rag_query(
-                session=session,
-                query=query,
-                session_id=session_id,
-                recording_filter=selected_recordings if selected_recordings else None,
-            )
+    logger.info(f"Starting streaming chat query for session {session_id}: {query[:50]}...")
 
-            answer = result.get("answer", "")
-            citations = result.get("citations", [])
+    # Build SSE options - payload must be JSON string for sse_options
+    import json as json_module
 
-            # Check for no results
-            is_no_results = not citations and "no relevant" in answer.lower()
+    payload_dict = {
+        "query": query,
+        "session_id": session_id,
+    }
+    if selected_recordings:
+        payload_dict["recording_filter"] = selected_recordings
+    payload = json_module.dumps(payload_dict)
 
-            # Add assistant response to history
-            updated_history.append(
-                {
-                    "role": "assistant",
-                    "content": answer,
-                    "citations": citations,
-                    "is_no_results": is_no_results,
-                }
-            )
+    # Set stream state to streaming
+    new_stream_state = {
+        "status": STREAM_STATE_STREAMING,
+        "partial_content": "",
+        "citations": None,
+        "error_message": None,
+    }
 
-            logger.info(
-                f"Chat query completed for session {session_id} with {len(citations)} citations"
-            )
+    # Render history WITHOUT the streaming message (streaming container handles that)
+    rendered = _render_message_history(updated_history)
 
-        finally:
-            session.close()
+    # Initial streaming message (empty with cursor)
+    streaming_msg = _create_streaming_message("", is_streaming=True)
 
-    except Exception as e:
-        error_msg = f"Failed to process your question: {e!s}"
-        logger.error(f"Chat query failed for session {session_id}: {e}", exc_info=True)
-
-        # Add error message to history
-        updated_history.append(
-            {
-                "role": "assistant",
-                "content": error_msg,
-                "citations": [],
-                "is_error": True,
-            }
-        )
-
-    # Render and return
     return (
-        _render_message_history(updated_history),
+        "/api/chat/stream",
+        sse_options(payload=payload, headers={"Content-Type": "application/json"}),
         updated_history,
+        rendered,
         "",  # Clear input
-        None,
+        new_stream_state,
+        streaming_msg,
+        {"display": "block"},  # Show streaming container
+        (reset_trigger or 0) + 1,  # Increment to trigger reset in clientside callback
     )
 
 
@@ -592,16 +669,27 @@ def sync_message_display(message_history: list[dict]) -> list:
 @callback(
     Output("chat-send-button", "disabled"),
     Input("chat-input", "value"),
+    Input("chat-stream-state", "data"),
 )
-def toggle_send_button(input_value: str | None) -> bool:
-    """Enable/disable send button based on input content.
+def toggle_send_button(input_value: str | None, stream_state: dict | None) -> bool:
+    """Enable/disable send button based on input content and streaming state.
+
+    Disables the button when:
+    - Input is empty or whitespace only
+    - Streaming is in progress (FR-008)
 
     Args:
         input_value: Current value of the input field.
+        stream_state: Current streaming state.
 
     Returns:
         True to disable the button, False to enable.
     """
+    # Disable during streaming
+    if stream_state and stream_state.get("status") == STREAM_STATE_STREAMING:
+        return True
+
+    # Disable if input is empty
     return not (input_value and input_value.strip())
 
 
@@ -609,17 +697,26 @@ def toggle_send_button(input_value: str | None) -> bool:
     Output("chat-message-history", "data", allow_duplicate=True),
     Output("chat-message-display", "children", allow_duplicate=True),
     Output("chat-input", "value", allow_duplicate=True),
+    Output("chat-stream-state", "data", allow_duplicate=True),
+    Output("chat-streaming-container", "children", allow_duplicate=True),
+    Output("chat-streaming-container", "style", allow_duplicate=True),
+    Output("streaming-reset-trigger", "data", allow_duplicate=True),
     Input("chat-clear-button", "n_clicks"),
+    State("streaming-reset-trigger", "data"),
     prevent_initial_call=True,
 )
-def clear_conversation(n_clicks: int | None) -> tuple[list, list, str]:
+def clear_conversation(
+    n_clicks: int | None,
+    reset_trigger: int | None,
+) -> tuple[list, list, str, dict, None, dict, int]:
     """Clear the conversation history and reset the chat display.
 
     Args:
         n_clicks: Number of times the clear button was clicked.
 
     Returns:
-        Tuple of (empty_history, welcome_message, empty_input).
+        Tuple of (empty_history, welcome_message, empty_input, reset_stream_state,
+        streaming_content, streaming_style, reset_accumulated).
     """
     if not n_clicks:
         # No action needed
@@ -628,4 +725,406 @@ def clear_conversation(n_clicks: int | None) -> tuple[list, list, str]:
         raise PreventUpdate
 
     logger.info("Clearing conversation history")
-    return [], [_create_welcome_message()], ""
+    return (
+        [],
+        [_create_welcome_message()],
+        "",
+        {
+            "status": STREAM_STATE_IDLE,
+            "partial_content": "",
+            "citations": None,
+            "error_message": None,
+        },
+        None,
+        {"display": "none"},
+        (reset_trigger or 0) + 1,  # Increment to trigger reset in clientside callback
+    )
+
+
+@callback(
+    Output("chat-stream-state", "data", allow_duplicate=True),
+    Output("chat-streaming-container", "children", allow_duplicate=True),
+    Output("chat-streaming-container", "style", allow_duplicate=True),
+    Output("chat-message-display", "children", allow_duplicate=True),
+    Output("chat-message-history", "data", allow_duplicate=True),
+    Output("streaming-reset-trigger", "data", allow_duplicate=True),
+    Input("chat-sse", "value"),
+    State("chat-stream-state", "data"),
+    State("chat-message-history", "data"),
+    State("streaming-accumulated-text", "data"),
+    State("streaming-reset-trigger", "data"),
+    prevent_initial_call=True,
+)
+def handle_sse_event(
+    sse_value: str | None,
+    stream_state: dict | None,
+    message_history: list[dict],
+    accumulated_content: str | None,
+    reset_trigger: int | None,
+) -> tuple[dict, dbc.Card | None, dict, list, list[dict], int]:
+    """Handle incoming SSE events and update streaming state.
+
+    Token events are handled by clientside callback for synchronous accumulation.
+    This callback handles citations, done, and error events.
+
+    Args:
+        sse_value: Raw SSE event data.
+        stream_state: Current streaming state.
+        message_history: Current message history.
+        accumulated_content: Content accumulated by clientside callback.
+
+    Returns:
+        Tuple of (updated_stream_state, streaming_msg, streaming_style,
+        rendered_messages, updated_history, reset_accumulated).
+    """
+    import json
+
+    from dash import no_update
+    from dash.exceptions import PreventUpdate
+
+    logger.debug(f"handle_sse_event called with sse_value: {str(sse_value)[:100]}")
+
+    if not sse_value:
+        raise PreventUpdate
+
+    # Initialize state if needed
+    if stream_state is None:
+        stream_state = {
+            "status": STREAM_STATE_IDLE,
+            "partial_content": "",
+            "citations": None,
+            "error_message": None,
+        }
+
+    if message_history is None:
+        message_history = []
+
+    # Parse SSE events - with concat=True, the value is concatenated JSON objects
+    # We need to find the LAST complete event to determine the current state
+    import re
+
+    event_data = {}
+    event_type = ""
+
+    if isinstance(sse_value, str) and sse_value.strip():
+        # Split concatenated JSON objects and parse the last one
+        # Pattern: split by }{ but keep the braces
+        json_strings = re.split(r'}\s*{', sse_value)
+
+        # Parse from the end to find the last valid event
+        for i in range(len(json_strings) - 1, -1, -1):
+            json_str = json_strings[i]
+            # Add back braces that were removed by split
+            if i > 0:
+                json_str = '{' + json_str
+            if i < len(json_strings) - 1:
+                json_str = json_str + '}'
+
+            try:
+                event_data = json.loads(json_str)
+                event_type = event_data.get("type", "")
+                # Found a valid event, use it
+                break
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+    if not event_type:
+        raise PreventUpdate
+
+    if event_type == "token":
+        # Token events are handled by clientside callback for synchronous accumulation
+        # Just update stream state status to streaming
+        new_state = {
+            **stream_state,
+            "status": STREAM_STATE_STREAMING,
+        }
+        return new_state, no_update, no_update, no_update, no_update, no_update
+
+    elif event_type == "citations":
+        # Citations event - just update state, keep streaming visible
+        new_state = {
+            **stream_state,
+            "citations": event_data.get("citations", []),
+        }
+        # Don't re-render anything, just store citations in state
+        return new_state, no_update, no_update, no_update, no_update, no_update
+
+    elif event_type == "error":
+        # Error event - finalize to history and hide streaming container
+        error_msg = event_data.get("message", "An error occurred")
+        # Use accumulated content from clientside callback
+        partial_content = accumulated_content or ""
+
+        # Add error to history, preserving partial content if any
+        updated_history = message_history.copy()
+        if partial_content:
+            updated_history.append(
+                {
+                    "role": "assistant",
+                    "content": partial_content + f"\n\n[Error: {error_msg}]",
+                    "citations": [],
+                    "is_error": True,
+                }
+            )
+        else:
+            updated_history.append(
+                {
+                    "role": "assistant",
+                    "content": f"Error: {error_msg}",
+                    "citations": [],
+                    "is_error": True,
+                }
+            )
+
+        logger.error(f"Streaming error: {error_msg}")
+
+        # Reset to idle
+        final_state = {
+            "status": STREAM_STATE_IDLE,
+            "partial_content": "",
+            "citations": None,
+            "error_message": None,
+        }
+
+        # Hide streaming container, render final history, trigger reset
+        return (
+            final_state,
+            None,
+            {"display": "none"},
+            _render_message_history(updated_history),
+            updated_history,
+            (reset_trigger or 0) + 1,  # Trigger reset in clientside callback
+        )
+
+    elif event_type == "done":
+        # Done event - finalize to history and hide streaming container
+        # Use accumulated content from clientside callback
+        partial_content = accumulated_content or ""
+        citations = stream_state.get("citations") or []
+
+        if not partial_content:
+            raise PreventUpdate
+
+        # Add assistant message to history
+        updated_history = message_history.copy()
+        is_no_results = not citations and "no relevant" in partial_content.lower()
+
+        updated_history.append(
+            {
+                "role": "assistant",
+                "content": partial_content,
+                "citations": citations,
+                "is_no_results": is_no_results,
+            }
+        )
+
+        logger.info(f"Stream done event: completed with {len(citations)} citations")
+
+        # Reset stream state
+        new_state = {
+            "status": STREAM_STATE_IDLE,
+            "partial_content": "",
+            "citations": None,
+            "error_message": None,
+        }
+
+        # Hide streaming container, render final history, trigger reset
+        return (
+            new_state,
+            None,
+            {"display": "none"},
+            _render_message_history(updated_history),
+            updated_history,
+            (reset_trigger or 0) + 1,  # Trigger reset in clientside callback
+        )
+
+    else:
+        # Unknown event - ignore
+        logger.warning(f"Unknown SSE event type: {event_type}")
+        raise PreventUpdate
+
+
+@callback(
+    Output("chat-stream-state", "data", allow_duplicate=True),
+    Output("chat-streaming-container", "children", allow_duplicate=True),
+    Output("chat-streaming-container", "style", allow_duplicate=True),
+    Output("chat-message-display", "children", allow_duplicate=True),
+    Output("chat-message-history", "data", allow_duplicate=True),
+    Output("streaming-reset-trigger", "data", allow_duplicate=True),
+    Input("chat-sse", "state"),
+    State("chat-stream-state", "data"),
+    State("chat-message-history", "data"),
+    State("streaming-accumulated-text", "data"),
+    State("streaming-reset-trigger", "data"),
+    prevent_initial_call=True,
+)
+def handle_sse_completion(
+    sse_state: str | None,
+    stream_state: dict | None,
+    message_history: list[dict],
+    accumulated_content: str | None,
+    reset_trigger: int | None,
+) -> tuple[dict, None, dict, list, list[dict], int]:
+    """Handle SSE stream completion (connection closed).
+
+    Finalizes the streaming message, adds it to history, hides the streaming
+    container, and resets stream state.
+
+    Args:
+        sse_state: SSE connection state.
+        stream_state: Current streaming state.
+        message_history: Current message history.
+        accumulated_content: Content accumulated by clientside callback.
+
+    Returns:
+        Tuple of (reset_stream_state, streaming_content, streaming_style,
+        rendered_messages, updated_history, reset_accumulated).
+    """
+    from dash.exceptions import PreventUpdate
+
+    logger.debug(f"handle_sse_completion called with sse_state: {sse_state}")
+
+    # Only act when stream closes (state becomes "closed" or None after streaming)
+    if sse_state not in ["closed", None]:
+        raise PreventUpdate
+
+    if not stream_state or stream_state.get("status") != STREAM_STATE_STREAMING:
+        raise PreventUpdate
+
+    # Use accumulated content from clientside callback
+    partial_content = accumulated_content or ""
+    citations = stream_state.get("citations") or []
+
+    # Skip if no content was streamed
+    if not partial_content:
+        raise PreventUpdate
+
+    if message_history is None:
+        message_history = []
+
+    # Add assistant message to history
+    updated_history = message_history.copy()
+    is_no_results = not citations and "no relevant" in partial_content.lower()
+
+    updated_history.append(
+        {
+            "role": "assistant",
+            "content": partial_content,
+            "citations": citations,
+            "is_no_results": is_no_results,
+        }
+    )
+
+    logger.info(f"Stream completed with {len(citations)} citations")
+
+    # Reset stream state
+    new_state = {
+        "status": STREAM_STATE_IDLE,
+        "partial_content": "",
+        "citations": None,
+        "error_message": None,
+    }
+
+    # Hide streaming container and render final history, trigger reset
+    return (
+        new_state,
+        None,
+        {"display": "none"},
+        _render_message_history(updated_history),
+        updated_history,
+        (reset_trigger or 0) + 1,  # Trigger reset in clientside callback
+    )
+
+
+# Clientside callback for token accumulation via direct DOM manipulation
+# SSE component uses concat=True, so we parse the concatenated JSON messages
+# Uses window._streamingContent for the accumulated text content
+# This is the ONLY callback that outputs to streaming-accumulated-text
+clientside_callback(
+    """
+    function(sseValue, resetTrigger) {
+        // Initialize window variables if needed
+        if (window._streamingContent === undefined) {
+            window._streamingContent = '';
+        }
+        if (window._lastResetTrigger === undefined) {
+            window._lastResetTrigger = resetTrigger;
+        }
+        if (window._lastProcessedLength === undefined) {
+            window._lastProcessedLength = 0;
+        }
+
+        // Check if reset was triggered (reset trigger changed)
+        if (resetTrigger !== window._lastResetTrigger) {
+            window._lastResetTrigger = resetTrigger;
+            // Reset all accumulators
+            window._streamingContent = '';
+            window._lastProcessedLength = 0;
+            // Also update the Store for Python callbacks
+            return '';
+        }
+
+        if (!sseValue) {
+            return window.dash_clientside.no_update;
+        }
+
+        // Only process the new portion of the concatenated value
+        if (sseValue.length <= window._lastProcessedLength) {
+            return window.dash_clientside.no_update;
+        }
+
+        const newPortion = sseValue.substring(window._lastProcessedLength);
+        window._lastProcessedLength = sseValue.length;
+
+        // Parse concatenated JSON objects (they're separated by newlines or just concatenated)
+        // Split by }{ to separate individual JSON objects
+        const jsonStrings = newPortion.replace(/}{/g, '}|||{').split('|||');
+
+        let hasUpdate = false;
+        let lastEventType = null;
+
+        for (const jsonStr of jsonStrings) {
+            if (!jsonStr.trim()) continue;
+
+            try {
+                const event = JSON.parse(jsonStr);
+
+                if (event.type === 'token' && event.content !== undefined) {
+                    window._streamingContent += event.content;
+                    hasUpdate = true;
+                }
+
+                lastEventType = event.type;
+            } catch (e) {
+                // May be partial JSON at the end, ignore
+                console.debug('Partial JSON:', jsonStr.substring(0, 30));
+            }
+        }
+
+        if (hasUpdate) {
+            // Update DOM directly for immediate visual feedback
+            const textEl = document.getElementById('streaming-text-content');
+            if (textEl) {
+                textEl.textContent = window._streamingContent;
+            }
+
+            // Auto-scroll the chat container
+            const container = document.getElementById('chat-scroll-container');
+            if (container) {
+                requestAnimationFrame(function() {
+                    container.scrollTop = container.scrollHeight;
+                });
+            }
+
+            // Return the accumulated content to update the Store for Python callbacks
+            return window._streamingContent;
+        }
+
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("streaming-accumulated-text", "data"),
+    Input("chat-sse", "value"),
+    Input("streaming-reset-trigger", "data"),
+    prevent_initial_call=True,
+)

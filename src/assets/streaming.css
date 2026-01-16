@@ -1,0 +1,30 @@
+/* Streaming cursor styles for chat interface */
+
+/* Pulsing cursor that appears while streaming is active */
+.streaming-cursor::after {
+    content: '|';
+    animation: blink 1s step-end infinite;
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Container for streaming content */
+.streaming-content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Disabled state styling for send button during streaming */
+.streaming-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
