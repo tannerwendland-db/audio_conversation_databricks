@@ -421,6 +421,8 @@ class TestChatCallbackWithRecordingFilter:
         self,
     ):
         """Chat callback should include selected recording IDs in SSE payload."""
+        import json
+
         from src.components.chat import handle_chat_submit
 
         selected_recordings = ["uuid-rec-001", "uuid-rec-002"]
@@ -435,19 +437,23 @@ class TestChatCallbackWithRecordingFilter:
             stream_state=None,
         )
 
-        # Result tuple: (url, sse_options, history, rendered, input, stream_state)
+        # Result tuple: (url, sse_options, history, rendered, input, stream_state,
+        #                streaming_msg, streaming_style)
         sse_options = result[1]
 
         # Verify SSE payload contains recording_filter
         assert sse_options is not None
         assert "payload" in sse_options
-        payload = sse_options["payload"]
+        # Payload is a JSON string, parse it to verify contents
+        payload = json.loads(sse_options["payload"])
         assert payload.get("recording_filter") == selected_recordings
 
     def test_chat_callback_with_no_filter_omits_recording_filter_from_payload(
         self,
     ):
         """Chat callback with no filter should not include recording_filter in SSE payload."""
+        import json
+
         from src.components.chat import handle_chat_submit
 
         # Simulate chat submission without filter (None)
@@ -460,13 +466,15 @@ class TestChatCallbackWithRecordingFilter:
             stream_state=None,
         )
 
-        # Result tuple: (url, sse_options, history, rendered, input, stream_state)
+        # Result tuple: (url, sse_options, history, rendered, input, stream_state,
+        #                streaming_msg, streaming_style)
         sse_options = result[1]
 
         # Verify SSE payload does not contain recording_filter (searches all)
         assert sse_options is not None
         assert "payload" in sse_options
-        payload = sse_options["payload"]
+        # Payload is a JSON string, parse it to verify contents
+        payload = json.loads(sse_options["payload"])
         assert "recording_filter" not in payload
 
 
